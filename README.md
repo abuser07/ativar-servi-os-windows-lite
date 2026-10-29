@@ -117,6 +117,30 @@ WindowsLiteRestore.exe --scan-report relatorio.txt --profile jogos
 
 ---
 
+## Instalador
+
+Além do executável portátil, o build gera um **instalador** com seleção de idioma
+na instalação:
+
+- `dist\WindowsLiteRestore-Setup.exe` (autocontido, ~2 MB).
+
+O instalador:
+
+1. Pede elevação (UAC) e abre a tela de **escolha de idioma** (6 idiomas) no topo.
+2. Permite escolher a **pasta de destino** (padrão: `%ProgramFiles%\WindowsLiteRestore`).
+3. Oferece **atalhos** no menu Iniciar e na área de trabalho.
+4. Instala o aplicativo + documentação e registra o **desinstalador**
+   (Painel de Controle → Programas e Recursos).
+
+Para desinstalar: use o atalho "Desinstalar Windows Lite Restore" no menu Iniciar,
+o item em *Programas e Recursos*, ou execute o desinstalador com:
+
+```powershell
+"%ProgramFiles%\WindowsLiteRestore\uninstall.exe" /uninstall
+```
+
+---
+
 ## Compilação
 
 O único requisito de build é um compilador **MinGW-w64** (recomendado

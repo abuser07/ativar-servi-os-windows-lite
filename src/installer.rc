@@ -1,0 +1,21 @@
+#include <windows.h>
+#include "resource.h"
+
+#define IDR_APP_EXE 101
+#define IDR_README 102
+#define IDR_DOC_EN 200
+#define IDR_DOC_ES 201
+#define IDR_DOC_FR 202
+#define IDR_DOC_ZH 203
+#define IDR_DOC_HI 204
+
+IDI_APPICON ICON "app.ico"
+1 RT_MANIFEST "installer.manifest"
+
+IDR_APP_EXE RCDATA "..\\dist\\WindowsLiteRestore.exe"
+IDR_README  RCDATA "..\\README.md"
+IDR_DOC_EN  RCDATA "..\\docs\\README.en.md"
+IDR_DOC_ES  RCDATA "..\\docs\\README.es.md"
+IDR_DOC_FR  RCDATA "..\\docs\\README.fr.md"
+IDR_DOC_ZH  RCDATA "..\\docs\\README.zh-CN.md"
+IDR_DOC_HI  RCDATA "..\\docs\\README.hi.md"

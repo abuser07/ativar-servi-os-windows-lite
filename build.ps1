@@ -90,10 +90,35 @@ Write-Host 'Vinculando executável...'
     -luser32 -lgdi32 -ladvapi32 -lmsimg32 -luxtheme
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
+# ---------------------------------------------------------------------------
+# Instalador (embute o executável e a documentação como recursos)
+# ---------------------------------------------------------------------------
+Write-Host 'Compilando instalador...'
+$installerObj = Join-Path $build 'installer.o'
+& $gpp @common "-I$src" -c (Join-Path $src 'installer.cpp') "-o$installerObj"
+if ($LASTEXITCODE -ne 0) { exit 1 }
+
+$installerRes = Join-Path $build 'installer-resources.o'
+Push-Location $src
+& $windres --codepage=65001 "-I." "installer.rc" "-o$installerRes"
+$ircCode = $LASTEXITCODE
+Pop-Location
+if ($ircCode -ne 0) { exit 1 }
+
+$setup = Join-Path $dist 'WindowsLiteRestore-Setup.exe'
+& $gpp @common "-I$src" $installerObj (Join-Path $build 'i18n.o') $installerRes "-o$setup" `
+    -static -static-libgcc -static-libstdc++ `
+    -lcomctl32 -lshell32 -lshlwapi -lole32 -loleaut32 -luuid `
+    -luser32 -lgdi32 -ladvapi32
+if ($LASTEXITCODE -ne 0) { exit 1 }
+
 Write-Host ''
 Write-Host "Executável gerado: $exe" -ForegroundColor Green
 $size = (Get-Item $exe).Length
 Write-Host "Tamanho: $([math]::Round($size / 1MB, 2)) MB"
+Write-Host "Instalador gerado: $setup" -ForegroundColor Green
+$setupSize = (Get-Item $setup).Length
+Write-Host "Tamanho do instalador: $([math]::Round($setupSize / 1MB, 2)) MB"
 
 # Copia o README para dist, se existir.
 $readme = Join-Path $root 'README.md'
