@@ -496,7 +496,8 @@ bool SetServiceStart(const std::wstring& name, DWORD startType, bool delayed,
     }
     SC_HANDLE service = OpenServiceW(
         scm, name.c_str(),
-        SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_START);
+        SERVICE_CHANGE_CONFIG | SERVICE_QUERY_CONFIG | SERVICE_QUERY_STATUS | SERVICE_START |
+            SERVICE_STOP);
     if (!service) {
         DWORD err = GetLastError();
         if (error) {
@@ -529,6 +530,37 @@ bool SetServiceStart(const std::wstring& name, DWORD startType, bool delayed,
     delayedInfo.fDelayedAutostart = (startType == SERVICE_AUTO_START && delayed) ? TRUE : FALSE;
     if (startType == SERVICE_AUTO_START || startType == SERVICE_DEMAND_START) {
         ChangeServiceConfig2W(service, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, &delayedInfo);
+    }
+
+    if (startType == SERVICE_DISABLED) {
+        SERVICE_STATUS_PROCESS status = {};
+        DWORD bytes = 0;
+        if (QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO,
+                                 reinterpret_cast<LPBYTE>(&status), sizeof(status), &bytes) &&
+            (status.dwCurrentState == SERVICE_RUNNING ||
+             status.dwCurrentState == SERVICE_START_PENDING ||
+             status.dwCurrentState == SERVICE_PAUSE_PENDING ||
+             status.dwCurrentState == SERVICE_PAUSED ||
+             status.dwCurrentState == SERVICE_CONTINUE_PENDING)) {
+            SERVICE_STATUS stopStatus = {};
+            if (ControlService(service, SERVICE_CONTROL_STOP, &stopStatus)) {
+                for (int i = 0; i < 100 && stopStatus.dwCurrentState != SERVICE_STOPPED; ++i) {
+                    Sleep(100);
+                    if (!QueryServiceStatusEx(service, SC_STATUS_PROCESS_INFO,
+                                              reinterpret_cast<LPBYTE>(&status), sizeof(status),
+                                              &bytes)) {
+                        break;
+                    }
+                    stopStatus.dwCurrentState = status.dwCurrentState;
+                }
+            } else {
+                DWORD err = GetLastError();
+                if (err != ERROR_SERVICE_NOT_ACTIVE && error) {
+                    *error = L"Configuração alterada, mas o serviço não pôde ser parado: " +
+                             FormatWinError(err);
+                }
+            }
+        }
     }
 
     if (tryStart && startType == SERVICE_AUTO_START) {
@@ -952,6 +984,52 @@ std::wstring PolicyValueText(DWORD value) {
 }  // namespace
 
 // ---------------------------------------------------------------------------
+// Resolução do destino de um serviço conforme o perfil ativo
+// ---------------------------------------------------------------------------
+
+void ResolveServiceTarget(Item& item, Profile profile) {
+    if (!item.present) {
+        item.target = L"—";
+        item.targetStart = item.startType;
+        item.targetDelayed = item.delayed;
+        item.needsChange = false;
+        item.recommended = false;
+        return;
+    }
+
+    if (profile == Profile::MicrosoftDefault) {
+        const ServiceDef* def = FindServiceDef(item.id);
+        DWORD start = def ? def->targetStart : SERVICE_DEMAND_START;
+        bool delayed = def ? def->targetDelayed : false;
+        item.targetStart = start;
+        item.targetDelayed = delayed;
+        item.target = StartTypeText(start, delayed);
+        item.needsChange = (item.startType != start) ||
+                           (start == SERVICE_AUTO_START && item.delayed != delayed);
+        item.recommended = def ? def->recommended : false;
+        return;
+    }
+
+    // Perfil de otimização: apenas serviços listados no perfil são alterados.
+    DWORD start = 0;
+    bool delayed = false;
+    if (GetProfileServiceTarget(item.id, profile, &start, &delayed)) {
+        item.targetStart = start;
+        item.targetDelayed = delayed;
+        item.target = StartTypeText(start, delayed);
+        item.needsChange = (item.startType != start) ||
+                           (start == SERVICE_AUTO_START && item.delayed != delayed);
+        item.recommended = true;
+    } else {
+        item.targetStart = item.startType;
+        item.targetDelayed = item.delayed;
+        item.target = L"Sem alteração";
+        item.needsChange = false;
+        item.recommended = false;
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Análise do sistema
 // ---------------------------------------------------------------------------
 
@@ -976,12 +1054,8 @@ bool App::ScanAll(std::wstring* error) {
         item.category = def.category;
         item.description = def.description;
         item.extra = def.name;
-        item.recommended = def.recommended;
         item.optional = def.optional;
         item.critical = def.critical;
-        item.targetStart = def.targetStart;
-        item.targetDelayed = def.targetDelayed;
-        item.target = StartTypeText(def.targetStart, def.targetDelayed);
 
         DWORD startType = SERVICE_DISABLED;
         bool delayed = false;
@@ -993,18 +1067,12 @@ bool App::ScanAll(std::wstring* error) {
                 item.present = false;
                 item.supported = false;
                 item.current = L"Não instalado";
-                item.target = L"—";
-                item.needsChange = false;
-                item.recommended = false;
                 item.description += L" O serviço não existe nesta instalação; pode ter sido removido pela imagem Lite. Neste caso, o componente de origem do Windows pode ser necessário.";
                 serviceMissing++;
             } else {
                 item.present = false;
                 item.supported = false;
                 item.current = L"Erro: " + FormatWinError(lastError);
-                item.target = L"—";
-                item.needsChange = false;
-                item.recommended = false;
             }
         } else {
             item.present = true;
@@ -1012,11 +1080,9 @@ bool App::ScanAll(std::wstring* error) {
             item.delayed = delayed;
             item.serviceState = state;
             item.current = StartTypeText(startType, delayed) + L" • " + ServiceStateText(state);
-            item.needsChange = (startType != def.targetStart) ||
-                               (def.targetStart == SERVICE_AUTO_START &&
-                                delayed != def.targetDelayed);
             serviceCount++;
         }
+        ResolveServiceTarget(item, activeProfile_);
         items_.push_back(std::move(item));
     }
     Log(L"Serviços analisados: " + FormatInt(serviceCount) + L" presentes, " +
@@ -1812,14 +1878,16 @@ bool App::ApplyPlan(const std::vector<Item*>& plan, bool dryRun, ApplySummary* s
         }
         std::wstring err;
         bool started = false;
+        bool shouldStart = (item->targetStart == SERVICE_AUTO_START);
         bool ok = SetServiceStart(item->id, item->targetStart, item->targetDelayed, &err,
-                                  true, &started);
+                                  shouldStart, &started);
         if (ok) {
             summary->success++;
             summary->servicesChanged++;
             std::wstring text = L"Serviço configurado: " + item->name + L" -> " +
                                 StartTypeText(item->targetStart, item->targetDelayed);
             if (started) text += L" (iniciado)";
+            else if (item->targetStart == SERVICE_DISABLED) text += L" (parado)";
             else if (!err.empty()) {
                 text += L" (" + err + L")";
                 summary->rebootRequired = true;
@@ -1885,7 +1953,8 @@ void App::BuildReport(std::wstring* report, const ApplySummary* summary) {
     std::wstring text;
     text += L"Windows Lite Restore — relatório\r\n";
     text += L"Gerado em: " + TimestampNow(false) + L"\r\n";
-    text += L"Modo: " + std::wstring(admin_ ? L"administrador" : L"somente leitura") + L"\r\n\r\n";
+    text += L"Modo: " + std::wstring(admin_ ? L"administrador" : L"somente leitura") + L"\r\n";
+    text += L"Perfil: " + std::wstring(ProfileName(activeProfile_)) + L"\r\n\r\n";
     text += GetSystemSummary();
     text += L"\r\n";
 
@@ -1947,6 +2016,7 @@ void App::BuildReport(std::wstring* report, const ApplySummary* summary) {
 int App::RunHeadless(const std::wstring& reportPath) {
     admin_ = IsElevated();
     readOnly_ = !admin_;
+    activeProfile_ = startupProfile_;
     InitLogging();
     CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
 

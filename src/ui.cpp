@@ -36,6 +36,7 @@ constexpr int kDetailId = 1102;
 constexpr int kStatusId = 1103;
 constexpr int kProgressId = 1104;
 constexpr int kCancelId = 1105;
+constexpr int kProfileLabelId = 1106;
 
 constexpr COLORREF kColorBg = RGB(244, 246, 250);
 constexpr COLORREF kColorWhite = RGB(255, 255, 255);
@@ -71,7 +72,10 @@ const wchar_t* ActionName(const Item* item) {
     if (!item->needsChange) return L"Já conforme";
     switch (item->kind) {
         case ItemKind::Feature: return L"Instalar";
-        case ItemKind::Service: return L"Ativar";
+        case ItemKind::Service:
+            if (item->targetStart == SERVICE_DISABLED) return L"Desativar";
+            if (item->targetStart == SERVICE_DEMAND_START) return L"Definir manual";
+            return L"Ativar";
         case ItemKind::Policy: return L"Restaurar";
         case ItemKind::Task: return L"Habilitar";
     }
@@ -206,6 +210,7 @@ int App::Run(HINSTANCE instance, const std::wstring& commandLine, int showCmd) {
     instance_ = instance;
     cmdLine_ = commandLine;
     ParseCommandLine(commandLine);
+    activeProfile_ = startupProfile_;
 
     if (!headlessReportPath_.empty()) {
         return RunHeadless(headlessReportPath_);
@@ -272,6 +277,34 @@ void App::ParseCommandLine(const std::wstring& commandLine) {
             if (i + 1 < argc) resumeSelectionPath_ = argv[++i];
         } else if (arg.rfind(L"--resume-selection=", 0) == 0) {
             resumeSelectionPath_ = arg.substr(19);
+        } else if (arg == L"--profile") {
+            if (i + 1 < argc) {
+                std::wstring value = Lower(argv[++i]);
+                if (value == L"gaming" || value == L"jogos" || value == L"jogo") {
+                    startupProfile_ = Profile::Gaming;
+                } else if (value == L"ai" || value == L"ia" ||
+                           value == L"inteligencia" || value == L"inteligência") {
+                    startupProfile_ = Profile::AI;
+                } else if (value == L"office" || value == L"escritorio" ||
+                           value == L"escritório") {
+                    startupProfile_ = Profile::Office;
+                } else {
+                    startupProfile_ = Profile::MicrosoftDefault;
+                }
+            }
+        } else if (arg.rfind(L"--profile=", 0) == 0) {
+            std::wstring value = Lower(arg.substr(10));
+            if (value == L"gaming" || value == L"jogos" || value == L"jogo") {
+                startupProfile_ = Profile::Gaming;
+            } else if (value == L"ai" || value == L"ia" || value == L"inteligencia" ||
+                       value == L"inteligência") {
+                startupProfile_ = Profile::AI;
+            } else if (value == L"office" || value == L"escritorio" ||
+                       value == L"escritório") {
+                startupProfile_ = Profile::Office;
+            } else {
+                startupProfile_ = Profile::MicrosoftDefault;
+            }
         }
     }
     LocalFree(argv);
@@ -326,6 +359,8 @@ void App::ApplyTheme() {
     if (detailPanel_) SetControlFont(detailPanel_, fontUi_);
     if (statusText_) SetControlFont(statusText_, fontSmall_);
     if (summaryText_) SetControlFont(summaryText_, fontSmall_);
+    if (profileLabel_) SetControlFont(profileLabel_, fontUi_);
+    if (profileCombo_) SetControlFont(profileCombo_, fontUi_);
     if (diagEdit_) SetControlFont(diagEdit_, fontMono_);
     if (logEdit_) SetControlFont(logEdit_, fontMono_);
     for (HWND button : diagButtons_) SetControlFont(button, fontUi_);
@@ -514,6 +549,22 @@ bool App::CreateMainWindow(int showCmd) {
                                    0, 0, 0, 0, hwnd_,
                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSummaryId)),
                                    instance_, nullptr);
+    profileLabel_ = CreateWindowExW(0, L"STATIC", L"Perfil:",
+                                    WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX, 0, 0, 0, 0,
+                                    hwnd_,
+                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(kProfileLabelId)),
+                                    instance_, nullptr);
+    profileCombo_ = CreateWindowExW(0, WC_COMBOBOXW, nullptr,
+                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST |
+                                        WS_VSCROLL,
+                                    0, 0, 0, 0, hwnd_,
+                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_PROFILE)),
+                                    instance_, nullptr);
+    for (int i = 0; i <= 3; ++i) {
+        SendMessageW(profileCombo_, CB_ADDSTRING, 0,
+                     reinterpret_cast<LPARAM>(ProfileName(static_cast<Profile>(i))));
+    }
+    ComboBox_SetCurSel(profileCombo_, static_cast<int>(activeProfile_));
     dryRunCheck_ = CreateWindowExW(0, L"BUTTON", L"Simular (não altera o sistema)",
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_DRYRUN)),
@@ -692,7 +743,10 @@ void App::Layout() {
     }
 
     // Barra inferior.
-    if (summaryText_) MoveWindow(summaryText_, m, footerY + Scale(4), clientW - 2 * m, Scale(22), TRUE);
+    if (profileLabel_) MoveWindow(profileLabel_, m, footerY + Scale(4), Scale(52), Scale(22), TRUE);
+    if (profileCombo_) MoveWindow(profileCombo_, m + Scale(54), footerY + Scale(2), Scale(238), Scale(220), TRUE);
+    if (summaryText_) MoveWindow(summaryText_, m + Scale(300), footerY + Scale(4),
+                                 clientW - m - Scale(300), Scale(22), TRUE);
     if (dryRunCheck_) MoveWindow(dryRunCheck_, m, footerY + Scale(40), Scale(260), Scale(24), TRUE);
 
     struct FooterButton {
@@ -773,6 +827,8 @@ void App::ShowTab(int index) {
     ShowWindow(detailPanel_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(dryRunCheck_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(summaryText_, itemPage ? SW_SHOW : SW_HIDE);
+    ShowWindow(profileLabel_, itemPage ? SW_SHOW : SW_HIDE);
+    ShowWindow(profileCombo_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(applyButton_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(defaultButton_, itemPage ? SW_SHOW : SW_HIDE);
 
@@ -793,6 +849,7 @@ void App::ShowTab(int index) {
         UpdateDiagnostics();
     }
 
+    UpdateFooterLabels();
     UpdateSelectionUi();
     Layout();
 }
@@ -950,7 +1007,10 @@ void App::PaintDetailPanel(HDC dc) {
     y += Scale(10);
 
     drawLabelValue(L"Estado atual", item->current, fontUi_, kColorText);
-    drawLabelValue(L"Padrão Microsoft", item->target, fontUi_, kColorText);
+    const wchar_t* targetLabel = activeProfile_ == Profile::MicrosoftDefault
+                                     ? L"Padrão Microsoft"
+                                     : L"Destino do perfil";
+    drawLabelValue(targetLabel, item->target, fontUi_, kColorText);
 
     // Divisor.
     line = CreateSolidBrush(kColorBorder);
@@ -995,7 +1055,7 @@ void App::PaintDetailPanel(HDC dc) {
     } else {
         fill = kColorSoftBlue;
         color = kColorAccent;
-        status = L"Pendente — marque a caixa para restaurar.";
+        status = L"Pendente — marque a caixa para aplicar a alteração.";
     }
     if (item->critical && item->needsChange) status += L" Item crítico do sistema.";
     if (item->optional && item->needsChange) status += L" Item opcional.";
@@ -1132,16 +1192,13 @@ void App::PopulatePages(bool autoSelectRecommended) {
     updatingList_ = false;
 
     for (Item& item : items_) item.selected = false;
-    if (autoSelectRecommended) {
-        for (Item& item : items_) {
-            if (item.supported && item.needsChange && item.recommended) item.selected = true;
-        }
-    }
+    if (autoSelectRecommended) ApplyProfileSelection();
 
     detailItem_ = nullptr;
     for (int i = 0; i < 4; ++i) RefreshPage(pages_[i]);
     if (detailPanel_) InvalidateRect(detailPanel_, nullptr, TRUE);
     RefreshAllCounts();
+    UpdateFooterLabels();
     UpdateDiagnostics();
 }
 
@@ -1170,6 +1227,41 @@ void App::ClearPage(Page& page) {
     }
     RefreshPage(page);
     UpdateSelectionUi();
+}
+
+void App::RecomputeServiceTargets() {
+    for (Item& item : items_) {
+        if (item.kind == ItemKind::Service) ResolveServiceTarget(item, activeProfile_);
+    }
+}
+
+void App::ApplyProfileSelection() {
+    for (Item& item : items_) item.selected = false;
+    for (Item& item : items_) {
+        if (!item.supported || !item.needsChange || !item.recommended) continue;
+        if (activeProfile_ == Profile::MicrosoftDefault || item.kind == ItemKind::Service) {
+            item.selected = true;
+        }
+    }
+}
+
+void App::UpdateFooterLabels() {
+    if (defaultButton_) {
+        SetWindowTextW(defaultButton_,
+                       activeProfile_ == Profile::MicrosoftDefault
+                           ? L"Restaurar padrão Microsoft"
+                           : L"Aplicar perfil (recomendado)");
+    }
+    const wchar_t* columnTitle = activeProfile_ == Profile::MicrosoftDefault
+                                     ? L"Padrão Microsoft"
+                                     : L"Destino do perfil";
+    for (int i = 0; i < 4; ++i) {
+        if (!pages_[i].list) continue;
+        LVCOLUMNW column = {};
+        column.mask = LVCF_TEXT;
+        column.pszText = const_cast<wchar_t*>(columnTitle);
+        ListView_SetColumn(pages_[i].list, 3, &column);
+    }
 }
 
 void App::UpdateDetails(Item* item) {
@@ -1212,10 +1304,16 @@ std::wstring App::SelectedSummaryText() const {
 std::vector<Item*> App::BuildPlan(bool recommendedOnly) const {
     std::vector<Item*> plan;
     for (const Item& item : items_) {
-        if (item.supported && item.needsChange &&
-            (recommendedOnly ? item.recommended : item.selected)) {
-            plan.push_back(const_cast<Item*>(&item));
+        if (!item.supported || !item.needsChange) continue;
+        if (recommendedOnly) {
+            if (activeProfile_ != Profile::MicrosoftDefault && item.kind != ItemKind::Service) {
+                continue;
+            }
+            if (!item.recommended) continue;
+        } else if (!item.selected) {
+            continue;
         }
+        plan.push_back(const_cast<Item*>(&item));
     }
     return plan;
 }
@@ -1291,6 +1389,7 @@ void App::SetBusyUi(bool busy, bool applying) {
     if (applyButton_) EnableWindow(applyButton_, !busy);
     if (defaultButton_) EnableWindow(defaultButton_, !busy);
     if (dryRunCheck_) EnableWindow(dryRunCheck_, !busy);
+    if (profileCombo_) EnableWindow(profileCombo_, !busy);
     for (HWND button : diagButtons_) EnableWindow(button, !busy);
     for (HWND button : logButtons_) EnableWindow(button, !busy);
 
@@ -1320,6 +1419,8 @@ void App::UpdateDiagnostics() {
     text += L"Windows Lite Restore — Diagnóstico\r\n";
     text += L"Gerado em: " + TimestampNow(false) + L"\r\n";
     text += L"Modo: " + std::wstring(admin_ ? L"administrador" : L"somente leitura") + L"\r\n";
+    text += L"Perfil: " + std::wstring(ProfileName(activeProfile_)) + L"\r\n";
+    text += L"Descrição: " + std::wstring(ProfileDescription(activeProfile_)) + L"\r\n";
     text += L"\r\n";
     text += GetSystemSummary();
 
@@ -1686,6 +1787,24 @@ void App::HandleCommand(WORD id, WORD code, HWND control) {
             dryRun_ = dryRunCheck_ && Button_GetCheck(dryRunCheck_) == BST_CHECKED;
             UpdateSelectionUi();
             break;
+        case ID_PROFILE: {
+            if (code != CBN_SELCHANGE) break;
+            if (!profileCombo_) break;
+            int index = ComboBox_GetCurSel(profileCombo_);
+            if (index < 0 || index > 3) break;
+            Profile profile = static_cast<Profile>(index);
+            if (profile == activeProfile_) break;
+            activeProfile_ = profile;
+            RecomputeServiceTargets();
+            ApplyProfileSelection();
+            for (int i = 0; i < 4; ++i) RefreshPage(pages_[i]);
+            RefreshAllCounts();
+            UpdateFooterLabels();
+            UpdateDiagnostics();
+            SetStatus(std::wstring(L"Perfil: ") + ProfileName(activeProfile_) + L" — " +
+                      ProfileDescription(activeProfile_));
+            break;
+        }
         case ID_ELEVATE: {
             if (admin_) break;
             SetStatus(L"Solicitando elevação...");
@@ -2300,8 +2419,9 @@ void App::ShowApplyConfirmation(const std::vector<Item*>& plan, ConfirmOptions* 
     }
 
     std::wstring summary;
-    summary += recommendedProfile ? L"Perfil: Padrão Microsoft (itens recomendados)\r\n"
-                                  : L"Perfil: seleção manual\r\n";
+    summary += L"Perfil: " + std::wstring(ProfileName(activeProfile_)) + L"\r\n";
+    summary += recommendedProfile ? L"Seleção: itens recomendados do perfil\r\n"
+                                  : L"Seleção: manual\r\n";
     if (dryRun_) summary += L"Modo: SIMULAÇÃO — nenhuma alteração será feita.\r\n";
     summary += L"\r\nResumo do plano:\r\n";
     if (feat) summary += L"\r\nRecursos (" + FormatInt(feat) + L"):\r\n" + featList;

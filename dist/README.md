@@ -5,8 +5,10 @@ registro, tarefas agendadas e recursos opcionais que imagens "Lite" costumam
 desativar ou remover — sempre com revisão do usuário e usando os padrões de
 referência da Microsoft.
 
-O aplicativo **nunca desativa nada**. Ele apenas ativa/restaura aquilo que você
-marcar, com simulação, relatório e backup reversível.
+Além da restauração, o aplicativo oferece **perfis de otimização** (Jogos, IA e
+Escritório) que desativam ou colocam em manual apenas os serviços desnecessários
+para cada situação. Toda alteração — ativar **ou** desativar — passa por revisão,
+simulação, relatório e backup reversível.
 
 ---
 
@@ -14,6 +16,7 @@ marcar, com simulação, relatório e backup reversível.
 
 - Interface gráfica em português, sem dependências externas (Win32 nativo).
 - Abas: **Recursos**, **Serviços**, **Políticas**, **Tarefas**, **Diagnóstico** e **Registro**.
+- Seletor de **perfil** (Padrão Microsoft, Jogos, IA, Escritório).
 - Seleção individual por checkbox, com busca, filtro por categoria e perfis
   ("Recomendados", "Todos pendentes", "Limpar").
 - **Simulação (dry-run)** para ver exatamente o que será alterado antes de aplicar.
@@ -22,6 +25,19 @@ marcar, com simulação, relatório e backup reversível.
 - **Desfazer última execução** (menu Diagnóstico).
 - Relatórios em texto e registro (log) detalhado.
 - Auto-elevação via UAC (`runas`) com preservação da seleção.
+
+### Perfis de otimização
+
+| Perfil | O que faz |
+|--------|-----------|
+| **Padrão Microsoft** | Restaura serviços, políticas, tarefas e recursos para o padrão de uma instalação completa. |
+| **Jogos** | Desativa telemetria, relatórios e entrega em segundo plano; coloca em manual SysMain, Windows Search, impressão, notificações etc. |
+| **Inteligência Artificial** | O mesmo de Jogos, e ainda desativa os serviços Xbox; libera CPU/RAM/disco para cargas de IA. |
+| **Escritório** | Desativa apenas jogos (Xbox) e telemetria; mantém impressão, pesquisa e atualizações. |
+
+Os perfis de otimização **nunca alteram serviços críticos do sistema nem de
+segurança** — apenas os itens listados em `src/catalog.cpp`. Os serviços não
+listados aparecem como "Sem alteração".
 
 ### O que é restaurado
 
@@ -55,10 +71,11 @@ inicialização de referência e se o item é recomendado/crítico/opcional).
 2. Se o Windows pedir elevação (UAC), aceite — muitas alterações exigem
    privilégios de administrador. Sem elevação o aplicativo funciona em **modo
    somente leitura**.
-3. A análise é executada automaticamente. Revise as abas e marque os itens
-   desejados (ou use **Recomendados**).
+3. A análise é executada automaticamente. Escolha o **perfil** desejado no
+   rodapé (Padrão Microsoft, Jogos, IA ou Escritório) e revise os itens marcados.
 4. Opcionalmente marque **Simular** para validar o plano sem alterar nada.
-5. Clique em **Aplicar selecionados** ou **Restaurar padrão Microsoft**.
+5. Clique em **Aplicar selecionados** (itens marcados) ou **Aplicar perfil** /
+   **Restaurar padrão Microsoft** (recomendados do perfil).
 6. Confirme o plano e escolha se deseja criar ponto de restauração e backup.
 7. Para reverter serviços/políticas/tarefas, use *Diagnóstico → Desfazer última
    execução*.
@@ -68,6 +85,7 @@ inicialização de referência e se o item é recomendado/crítico/opcional).
 | Opção | Descrição |
 |-------|-----------|
 | `--scan-report <arquivo>` | Gera um relatório de análise e sai (modo sem interface). |
+| `--profile <nome>` | Perfil inicial: `padrao`/`default`, `jogos`/`gaming`, `ia`/`ai`, `escritorio`/`office`. |
 | `--no-elevate` / `--read-only` | Inicia sem solicitar elevação (somente leitura). |
 | `--elevated` | Indica que o processo já está elevado (uso interno). |
 | `--resume-selection <arquivo>` | Restaura a seleção salva (uso interno). |
@@ -75,7 +93,7 @@ inicialização de referência e se o item é recomendado/crítico/opcional).
 Exemplo:
 
 ```powershell
-WindowsLiteRestore.exe --scan-report relatorio.txt
+WindowsLiteRestore.exe --scan-report relatorio.txt --profile jogos
 ```
 
 ---
@@ -127,6 +145,9 @@ tools/             make-icon.ps1
 
 - **Padrões de referência** correspondem a uma instalação completa do Windows 10/11.
   Edições, builds e hardware podem variar; revise antes de aplicar.
+- **Perfis de otimização desativam serviços** (telemetria, Xbox, etc.) e colocam
+  outros em manual. Eles **não** alteram serviços críticos ou de segurança, e
+  tudo pode ser revertido pelo backup/Desfazer.
 - **Serviços ausentes não são "instalados"** pelo aplicativo — a imagem Lite pode
   ter removido o componente de origem. Nesses casos o item aparece como
   indisponível.

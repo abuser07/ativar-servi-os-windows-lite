@@ -369,6 +369,137 @@ const ServiceDef g_serviceCatalog[] = {
 const size_t g_serviceCatalogCount = _countof(g_serviceCatalog);
 
 // ---------------------------------------------------------------------------
+// Perfis de otimização de serviços
+//
+// Cada perfil altera SOMENTE os serviços listados abaixo; os demais mantêm o
+// padrão Microsoft. Os perfis nunca alteram serviços críticos do sistema nem
+// serviços de segurança.
+// ---------------------------------------------------------------------------
+
+struct ProfileServiceRule {
+    const wchar_t* name;
+    DWORD start;    // SERVICE_DISABLED ou SERVICE_DEMAND_START
+    bool delayed;
+};
+
+// Jogos: reduz atividade em segundo plano para liberar CPU, memória e rede.
+const ProfileServiceRule g_gamingServiceRules[] = {
+    // Telemetria e relatórios
+    { L"DiagTrack", SERVICE_DISABLED, false },
+    { L"dmwappushservice", SERVICE_DISABLED, false },
+    { L"WerSvc", SERVICE_DISABLED, false },
+    // Atualizações em segundo plano (evita interrupções e uso de rede)
+    { L"DoSvc", SERVICE_DISABLED, false },
+    { L"UsoSvc", SERVICE_DEMAND_START, false },
+    // Memória e indexação
+    { L"SysMain", SERVICE_DEMAND_START, false },
+    { L"WSearch", SERVICE_DEMAND_START, false },
+    // Itens não essenciais durante a sessão de jogo
+    { L"WpnService", SERVICE_DEMAND_START, false },
+    { L"Spooler", SERVICE_DEMAND_START, false },
+    { L"StiSvc", SERVICE_DEMAND_START, false },
+    { L"TextInputManagementService", SERVICE_DEMAND_START, false },
+    { L"ShellHWDetection", SERVICE_DEMAND_START, false },
+};
+
+// IA / cargas intensas (treinamento, inferência, GPU): máximo de recursos
+// para o processamento, mantendo rede e segurança.
+const ProfileServiceRule g_aiServiceRules[] = {
+    // Telemetria e relatórios
+    { L"DiagTrack", SERVICE_DISABLED, false },
+    { L"dmwappushservice", SERVICE_DISABLED, false },
+    { L"WerSvc", SERVICE_DISABLED, false },
+    // Entrega de atualizações e orquestração em segundo plano
+    { L"DoSvc", SERVICE_DISABLED, false },
+    { L"UsoSvc", SERVICE_DEMAND_START, false },
+    // Jogos/Xbox não são necessários para IA
+    { L"XblAuthManager", SERVICE_DISABLED, false },
+    { L"XblGameSave", SERVICE_DISABLED, false },
+    { L"XboxGipSvc", SERVICE_DISABLED, false },
+    { L"XboxNetApiSvc", SERVICE_DISABLED, false },
+    // Memória e indexação
+    { L"SysMain", SERVICE_DEMAND_START, false },
+    { L"WSearch", SERVICE_DEMAND_START, false },
+    // Itens não essenciais
+    { L"WpnService", SERVICE_DEMAND_START, false },
+    { L"Spooler", SERVICE_DEMAND_START, false },
+    { L"StiSvc", SERVICE_DEMAND_START, false },
+    { L"TextInputManagementService", SERVICE_DEMAND_START, false },
+    { L"ShellHWDetection", SERVICE_DEMAND_START, false },
+};
+
+// Escritório: mantém produtividade (impressão, pesquisa, atualizações) e
+// desativa apenas entretenimento, jogos e telemetria.
+const ProfileServiceRule g_officeServiceRules[] = {
+    // Telemetria e relatórios
+    { L"DiagTrack", SERVICE_DISABLED, false },
+    { L"dmwappushservice", SERVICE_DISABLED, false },
+    { L"WerSvc", SERVICE_DISABLED, false },
+    // Jogos/Xbox não são necessários para trabalho de escritório
+    { L"XblAuthManager", SERVICE_DISABLED, false },
+    { L"XblGameSave", SERVICE_DISABLED, false },
+    { L"XboxGipSvc", SERVICE_DISABLED, false },
+    { L"XboxNetApiSvc", SERVICE_DISABLED, false },
+    // Notificações e entrega em segundo plano (mantém sob demanda)
+    { L"WpnService", SERVICE_DEMAND_START, false },
+    { L"DoSvc", SERVICE_DEMAND_START, false },
+};
+
+const wchar_t* ProfileName(Profile profile) {
+    switch (profile) {
+        case Profile::MicrosoftDefault: return L"Padrão Microsoft";
+        case Profile::Gaming: return L"Jogos";
+        case Profile::AI: return L"Inteligência Artificial";
+        case Profile::Office: return L"Escritório";
+    }
+    return L"Padrão Microsoft";
+}
+
+const wchar_t* ProfileDescription(Profile profile) {
+    switch (profile) {
+        case Profile::MicrosoftDefault:
+            return L"Restaura serviços, políticas, tarefas e recursos para o padrão Microsoft.";
+        case Profile::Gaming:
+            return L"Desativa telemetria e serviços desnecessários para liberar CPU, memória e rede durante os jogos.";
+        case Profile::AI:
+            return L"Reduz atividade em segundo plano e desativa jogos/telemetria para dar o máximo de recursos a cargas de IA.";
+        case Profile::Office:
+            return L"Desativa jogos e telemetria, mantendo impressão, pesquisa e atualizações para produtividade.";
+    }
+    return L"";
+}
+
+bool GetProfileServiceTarget(const std::wstring& name, Profile profile, DWORD* start,
+                             bool* delayed) {
+    const ProfileServiceRule* rules = nullptr;
+    size_t count = 0;
+    switch (profile) {
+        case Profile::Gaming:
+            rules = g_gamingServiceRules;
+            count = _countof(g_gamingServiceRules);
+            break;
+        case Profile::AI:
+            rules = g_aiServiceRules;
+            count = _countof(g_aiServiceRules);
+            break;
+        case Profile::Office:
+            rules = g_officeServiceRules;
+            count = _countof(g_officeServiceRules);
+            break;
+        default:
+            return false;
+    }
+    for (size_t i = 0; i < count; ++i) {
+        if (name == rules[i].name) {
+            if (start) *start = rules[i].start;
+            if (delayed) *delayed = rules[i].delayed;
+            return true;
+        }
+    }
+    return false;
+}
+
+// ---------------------------------------------------------------------------
 // Recursos opcionais do Windows
 // ---------------------------------------------------------------------------
 

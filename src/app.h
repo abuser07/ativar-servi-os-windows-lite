@@ -33,6 +33,14 @@ enum class StartKind : DWORD {
     Disabled = 4
 };
 
+// Perfis de otimização de serviços.
+enum class Profile {
+    MicrosoftDefault = 0,
+    Gaming = 1,
+    AI = 2,
+    Office = 3
+};
+
 struct ServiceDef {
     const wchar_t* name;
     const wchar_t* display;
@@ -86,6 +94,10 @@ extern const size_t g_taskCatalogCount;
 
 const FeatureDef* FindFeatureDef(const std::wstring& name);
 const ServiceDef* FindServiceDef(const std::wstring& name);
+
+const wchar_t* ProfileName(Profile profile);
+const wchar_t* ProfileDescription(Profile profile);
+bool GetProfileServiceTarget(const std::wstring& name, Profile profile, DWORD* start, bool* delayed);
 
 // ---------------------------------------------------------------------------
 // Modelo de itens e páginas
@@ -237,6 +249,9 @@ public:
     void ShowTab(int index);
     void UpdateDetails(Item* item);
     void FocusPageFor(ItemKind kind);
+    void RecomputeServiceTargets();
+    void ApplyProfileSelection();
+    void UpdateFooterLabels();
     void SetBusyUi(bool busy, bool applying = false);
     void AppendLogLine(const std::wstring& line);
     void UpdateDiagnostics();
@@ -320,6 +335,8 @@ private:
     HWND summaryText_ = nullptr;
     HWND detailPanel_ = nullptr;
     Item* detailItem_ = nullptr;
+    HWND profileLabel_ = nullptr;
+    HWND profileCombo_ = nullptr;
     HWND dryRunCheck_ = nullptr;
     HWND applyButton_ = nullptr;
     HWND defaultButton_ = nullptr;
@@ -359,6 +376,7 @@ private:
     bool applyBackup_ = true;
     bool applyDryRun_ = false;
     bool firstScan_ = true;
+    Profile activeProfile_ = Profile::MicrosoftDefault;
     bool closing_ = false;
     bool updatingList_ = false;
     int dpi_ = 96;
@@ -372,6 +390,7 @@ private:
     std::wstring resumeSelectionPath_;
     std::wstring headlessReportPath_;
     bool elevatedArg_ = false;
+    Profile startupProfile_ = Profile::MicrosoftDefault;
 
     CRITICAL_SECTION logCs_{};
     bool logCsInit_ = false;
@@ -443,3 +462,4 @@ bool QueryScheduledTask(const std::wstring& folder, const std::wstring& name,
                         bool* enabled, bool* present, std::wstring* error);
 std::wstring GuidToText(const GUID& guid);
 std::wstring BytesToHex(const BYTE* data, size_t size);
+void ResolveServiceTarget(Item& item, Profile profile);
