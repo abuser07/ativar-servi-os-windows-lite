@@ -35,9 +35,11 @@ simulação, relatório e backup reversível.
 | **Inteligência Artificial** | O mesmo de Jogos, e ainda desativa os serviços Xbox; libera CPU/RAM/disco para cargas de IA. |
 | **Escritório** | Desativa apenas jogos (Xbox) e telemetria; mantém impressão, pesquisa e atualizações. |
 
-Os perfis de otimização **nunca alteram serviços críticos do sistema nem de
-segurança** — apenas os itens listados em `src/catalog.cpp`. Os serviços não
-listados aparecem como "Sem alteração".
+Os perfis de otimização **nunca alteram serviços essenciais do sistema** (inicialização,
+logon, segurança e rede básica). Esses serviços aparecem marcados como
+**"Essencial (protegido)"** e não podem ser desativados — evitando que uma
+otimização impeça o logon ou a inicialização do Windows. Os demais serviços não
+listados no perfil aparecem como "Sem alteração".
 
 ### O que é restaurado
 

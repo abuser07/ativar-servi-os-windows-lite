@@ -73,6 +73,7 @@ const wchar_t* ActionName(const Item* item) {
     switch (item->kind) {
         case ItemKind::Feature: return L"Instalar";
         case ItemKind::Service:
+            if (item->essential && !item->needsChange) return L"Essencial (protegido)";
             if (item->targetStart == SERVICE_DISABLED) return L"Desativar";
             if (item->targetStart == SERVICE_DEMAND_START) return L"Definir manual";
             return L"Ativar";
@@ -360,7 +361,7 @@ void App::ApplyTheme() {
     if (statusText_) SetControlFont(statusText_, fontSmall_);
     if (summaryText_) SetControlFont(summaryText_, fontSmall_);
     if (profileLabel_) SetControlFont(profileLabel_, fontUi_);
-    if (profileCombo_) SetControlFont(profileCombo_, fontUi_);
+    for (HWND button : profileButtons_) SetControlFont(button, fontUi_);
     if (diagEdit_) SetControlFont(diagEdit_, fontMono_);
     if (logEdit_) SetControlFont(logEdit_, fontMono_);
     for (HWND button : diagButtons_) SetControlFont(button, fontUi_);
@@ -549,22 +550,20 @@ bool App::CreateMainWindow(int showCmd) {
                                    0, 0, 0, 0, hwnd_,
                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSummaryId)),
                                    instance_, nullptr);
-    profileLabel_ = CreateWindowExW(0, L"STATIC", L"Perfil:",
+    profileLabel_ = CreateWindowExW(0, L"STATIC", L"Perfil de otimização:",
                                     WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX, 0, 0, 0, 0,
                                     hwnd_,
                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(kProfileLabelId)),
                                     instance_, nullptr);
-    profileCombo_ = CreateWindowExW(0, WC_COMBOBOXW, nullptr,
-                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST |
-                                        WS_VSCROLL,
-                                    0, 0, 0, 0, hwnd_,
-                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_PROFILE)),
-                                    instance_, nullptr);
-    for (int i = 0; i <= 3; ++i) {
-        SendMessageW(profileCombo_, CB_ADDSTRING, 0,
-                     reinterpret_cast<LPARAM>(ProfileName(static_cast<Profile>(i))));
+    const wchar_t* profileLabels[4] = {L"Padrão Microsoft", L"Jogos", L"IA", L"Escritório"};
+    for (int i = 0; i < 4; ++i) {
+        DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTORADIOBUTTON | BS_PUSHLIKE;
+        if (i == 0) style |= WS_GROUP;
+        profileButtons_[i] = CreateWindowExW(
+            0, L"BUTTON", profileLabels[i], style, 0, 0, 0, 0, hwnd_,
+            reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_PROFILE + i)), instance_, nullptr);
     }
-    ComboBox_SetCurSel(profileCombo_, static_cast<int>(activeProfile_));
+    Button_SetCheck(profileButtons_[static_cast<int>(activeProfile_)], BST_CHECKED);
     dryRunCheck_ = CreateWindowExW(0, L"BUTTON", L"Simular (não altera o sistema)",
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_DRYRUN)),
@@ -682,6 +681,7 @@ void App::Layout() {
     const int m = Scale(16);
     const int headerH = Scale(92);
     const int tabH = Scale(34);
+    const int profileH = Scale(40);
     const int gap = Scale(8);
     const int footerH = Scale(78);
     const int statusH = Scale(26);
@@ -690,10 +690,22 @@ void App::Layout() {
 
     if (tab_) MoveWindow(tab_, m, headerH, clientW - 2 * m, tabH, TRUE);
 
-    const int contentY = headerH + tabH + gap;
+    const int profileY = headerH + tabH + gap;
+    const int contentY = headerH + tabH + gap + profileH + gap;
     const int footerY = clientH - statusH - footerH;
     const int contentH = footerY - contentY;
     const int detailW = Scale(330);
+
+    // Barra de perfil (abaixo das abas).
+    if (profileLabel_) MoveWindow(profileLabel_, m, profileY + Scale(9), Scale(150), Scale(22), TRUE);
+    int px = m + Scale(150);
+    int buttonWidths[4] = {Scale(150), Scale(90), Scale(80), Scale(110)};
+    for (int i = 0; i < 4; ++i) {
+        if (profileButtons_[i]) {
+            MoveWindow(profileButtons_[i], px, profileY + Scale(4), buttonWidths[i], Scale(30), TRUE);
+            px += buttonWidths[i] + gap;
+        }
+    }
 
     // Páginas de itens.
     for (int i = 0; i < 4; ++i) {
@@ -743,10 +755,7 @@ void App::Layout() {
     }
 
     // Barra inferior.
-    if (profileLabel_) MoveWindow(profileLabel_, m, footerY + Scale(4), Scale(52), Scale(22), TRUE);
-    if (profileCombo_) MoveWindow(profileCombo_, m + Scale(54), footerY + Scale(2), Scale(238), Scale(220), TRUE);
-    if (summaryText_) MoveWindow(summaryText_, m + Scale(300), footerY + Scale(4),
-                                 clientW - m - Scale(300), Scale(22), TRUE);
+    if (summaryText_) MoveWindow(summaryText_, m, footerY + Scale(4), clientW - 2 * m, Scale(22), TRUE);
     if (dryRunCheck_) MoveWindow(dryRunCheck_, m, footerY + Scale(40), Scale(260), Scale(24), TRUE);
 
     struct FooterButton {
@@ -827,8 +836,6 @@ void App::ShowTab(int index) {
     ShowWindow(detailPanel_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(dryRunCheck_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(summaryText_, itemPage ? SW_SHOW : SW_HIDE);
-    ShowWindow(profileLabel_, itemPage ? SW_SHOW : SW_HIDE);
-    ShowWindow(profileCombo_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(applyButton_, itemPage ? SW_SHOW : SW_HIDE);
     ShowWindow(defaultButton_, itemPage ? SW_SHOW : SW_HIDE);
 
@@ -1044,7 +1051,11 @@ void App::PaintDetailPanel(HDC dc) {
     COLORREF fill = kColorSoftBlue;
     COLORREF color = kColorAccent;
     std::wstring status;
-    if (!item->supported) {
+    if (item->essential) {
+        fill = kColorSoftBlue;
+        color = RGB(16, 80, 150);
+        status = L"Essencial — serviço protegido contra desativação.";
+    } else if (!item->supported) {
         fill = kColorSoftAmber;
         color = kColorWarn;
         status = L"Indisponível — pode ter sido removido pela imagem Lite.";
@@ -1057,7 +1068,7 @@ void App::PaintDetailPanel(HDC dc) {
         color = kColorAccent;
         status = L"Pendente — marque a caixa para aplicar a alteração.";
     }
-    if (item->critical && item->needsChange) status += L" Item crítico do sistema.";
+    if (item->critical && !item->essential && item->needsChange) status += L" Item crítico do sistema.";
     if (item->optional && item->needsChange) status += L" Item opcional.";
 
     RECT box = {x, boxTop, x + w, boxTop + boxH};
@@ -1264,6 +1275,15 @@ void App::UpdateFooterLabels() {
     }
 }
 
+void App::UpdateProfileButtons() {
+    for (int i = 0; i < 4; ++i) {
+        if (profileButtons_[i]) {
+            Button_SetCheck(profileButtons_[i],
+                            i == static_cast<int>(activeProfile_) ? BST_CHECKED : BST_UNCHECKED);
+        }
+    }
+}
+
 void App::UpdateDetails(Item* item) {
     detailItem_ = item;
     if (detailPanel_) InvalidateRect(detailPanel_, nullptr, TRUE);
@@ -1389,7 +1409,7 @@ void App::SetBusyUi(bool busy, bool applying) {
     if (applyButton_) EnableWindow(applyButton_, !busy);
     if (defaultButton_) EnableWindow(defaultButton_, !busy);
     if (dryRunCheck_) EnableWindow(dryRunCheck_, !busy);
-    if (profileCombo_) EnableWindow(profileCombo_, !busy);
+    for (HWND button : profileButtons_) EnableWindow(button, !busy);
     for (HWND button : diagButtons_) EnableWindow(button, !busy);
     for (HWND button : logButtons_) EnableWindow(button, !busy);
 
@@ -1562,6 +1582,7 @@ LRESULT App::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
                             Item* item = reinterpret_cast<Item*>(cd->nmcd.lItemlParam);
                             if (item) {
                                 if (!item->supported) cd->clrText = RGB(150, 160, 175);
+                                else if (item->essential) cd->clrText = RGB(16, 80, 150);
                                 else if (!item->needsChange) cd->clrText = kColorMuted;
                                 else cd->clrText = kColorText;
                             }
@@ -1787,10 +1808,12 @@ void App::HandleCommand(WORD id, WORD code, HWND control) {
             dryRun_ = dryRunCheck_ && Button_GetCheck(dryRunCheck_) == BST_CHECKED;
             UpdateSelectionUi();
             break;
-        case ID_PROFILE: {
-            if (code != CBN_SELCHANGE) break;
-            if (!profileCombo_) break;
-            int index = ComboBox_GetCurSel(profileCombo_);
+        case ID_PROFILE:
+        case ID_PROFILE + 1:
+        case ID_PROFILE + 2:
+        case ID_PROFILE + 3: {
+            if (code != BN_CLICKED) break;
+            int index = static_cast<int>(id) - ID_PROFILE;
             if (index < 0 || index > 3) break;
             Profile profile = static_cast<Profile>(index);
             if (profile == activeProfile_) break;
@@ -1800,6 +1823,7 @@ void App::HandleCommand(WORD id, WORD code, HWND control) {
             for (int i = 0; i < 4; ++i) RefreshPage(pages_[i]);
             RefreshAllCounts();
             UpdateFooterLabels();
+            UpdateProfileButtons();
             UpdateDiagnostics();
             SetStatus(std::wstring(L"Perfil: ") + ProfileName(activeProfile_) + L" — " +
                       ProfileDescription(activeProfile_));

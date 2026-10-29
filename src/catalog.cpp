@@ -369,6 +369,31 @@ const ServiceDef g_serviceCatalog[] = {
 const size_t g_serviceCatalogCount = _countof(g_serviceCatalog);
 
 // ---------------------------------------------------------------------------
+// Serviços essenciais para inicialização, logon, segurança e rede básica.
+// Estes serviços NUNCA podem ser desativados: o aplicativo os marca como
+// protegidos e os perfis de otimização não os alteram.
+// ---------------------------------------------------------------------------
+
+const wchar_t* g_essentialServices[] = {
+    // Inicialização e logon
+    L"EventLog", L"PlugPlay", L"Power", L"ProfSvc", L"SamSs", L"CryptSvc",
+    L"Winmgmt", L"Schedule", L"BrokerInfrastructure", L"SystemEventsBroker",
+    L"Appinfo",
+    // Segurança
+    L"BFE", L"MpsSvc", L"WinDefend", L"wscsvc", L"TrustedInstaller",
+    L"UsoSvc", L"WaaSMedicSvc",
+    // Rede básica
+    L"Dnscache", L"Dhcp", L"NlaSvc", L"nsi",
+};
+
+bool IsEssentialService(const std::wstring& name) {
+    for (size_t i = 0; i < _countof(g_essentialServices); ++i) {
+        if (name == g_essentialServices[i]) return true;
+    }
+    return false;
+}
+
+// ---------------------------------------------------------------------------
 // Perfis de otimização de serviços
 //
 // Cada perfil altera SOMENTE os serviços listados abaixo; os demais mantêm o

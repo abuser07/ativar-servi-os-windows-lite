@@ -1013,7 +1013,8 @@ void ResolveServiceTarget(Item& item, Profile profile) {
     // Perfil de otimização: apenas serviços listados no perfil são alterados.
     DWORD start = 0;
     bool delayed = false;
-    if (GetProfileServiceTarget(item.id, profile, &start, &delayed)) {
+    if (GetProfileServiceTarget(item.id, profile, &start, &delayed) &&
+        !(item.essential && start == SERVICE_DISABLED)) {
         item.targetStart = start;
         item.targetDelayed = delayed;
         item.target = StartTypeText(start, delayed);
@@ -1056,6 +1057,7 @@ bool App::ScanAll(std::wstring* error) {
         item.extra = def.name;
         item.optional = def.optional;
         item.critical = def.critical;
+        item.essential = IsEssentialService(def.name);
 
         DWORD startType = SERVICE_DISABLED;
         bool delayed = false;

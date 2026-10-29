@@ -94,6 +94,7 @@ extern const size_t g_taskCatalogCount;
 
 const FeatureDef* FindFeatureDef(const std::wstring& name);
 const ServiceDef* FindServiceDef(const std::wstring& name);
+bool IsEssentialService(const std::wstring& name);
 
 const wchar_t* ProfileName(Profile profile);
 const wchar_t* ProfileDescription(Profile profile);
@@ -126,6 +127,7 @@ struct Item {
     bool recommended = false; // selecionado pelo perfil "Padrão Microsoft"
     bool selected = false;
     bool critical = false;
+    bool essential = false;   // essencial para inicialização/logon (não pode ser desativado)
     bool optional = false;
 
     // Recurso (DISM)
@@ -252,6 +254,7 @@ public:
     void RecomputeServiceTargets();
     void ApplyProfileSelection();
     void UpdateFooterLabels();
+    void UpdateProfileButtons();
     void SetBusyUi(bool busy, bool applying = false);
     void AppendLogLine(const std::wstring& line);
     void UpdateDiagnostics();
@@ -336,7 +339,7 @@ private:
     HWND detailPanel_ = nullptr;
     Item* detailItem_ = nullptr;
     HWND profileLabel_ = nullptr;
-    HWND profileCombo_ = nullptr;
+    HWND profileButtons_[4] = {};
     HWND dryRunCheck_ = nullptr;
     HWND applyButton_ = nullptr;
     HWND defaultButton_ = nullptr;
