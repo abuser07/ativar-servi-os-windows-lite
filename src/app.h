@@ -342,6 +342,7 @@ private:
     Item* detailItem_ = nullptr;
     HWND profileLabel_ = nullptr;
     HWND profileButtons_[4] = {};
+    HWND languageCombo_ = nullptr;
     HWND dryRunCheck_ = nullptr;
     HWND applyButton_ = nullptr;
     HWND defaultButton_ = nullptr;

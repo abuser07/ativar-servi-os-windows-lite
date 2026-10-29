@@ -362,6 +362,7 @@ void App::ApplyTheme() {
     if (summaryText_) SetControlFont(summaryText_, fontSmall_);
     if (profileLabel_) SetControlFont(profileLabel_, fontUi_);
     for (HWND button : profileButtons_) SetControlFont(button, fontUi_);
+    if (languageCombo_) SetControlFont(languageCombo_, fontUi_);
     if (diagEdit_) SetControlFont(diagEdit_, fontMono_);
     if (logEdit_) SetControlFont(logEdit_, fontMono_);
     for (HWND button : diagButtons_) SetControlFont(button, fontUi_);
@@ -565,6 +566,19 @@ bool App::CreateMainWindow(int showCmd) {
             reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_PROFILE + i)), instance_, nullptr);
     }
     Button_SetCheck(profileButtons_[static_cast<int>(activeProfile_)], BST_CHECKED);
+
+    languageCombo_ = CreateWindowExW(0, WC_COMBOBOXW, nullptr,
+                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST |
+                                         WS_VSCROLL,
+                                     0, 0, 0, 0, hwnd_,
+                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_LANGUAGE)),
+                                     instance_, nullptr);
+    for (int i = 0; i < kLanguageCount; ++i) {
+        SendMessageW(languageCombo_, CB_ADDSTRING, 0,
+                     reinterpret_cast<LPARAM>(LanguageName(static_cast<Language>(i))));
+    }
+    ComboBox_SetCurSel(languageCombo_, static_cast<int>(language_));
+
     dryRunCheck_ = CreateWindowExW(0, L"BUTTON", Tr(STR_SIMULATE),
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_DRYRUN)),
@@ -705,6 +719,10 @@ void App::Layout() {
             MoveWindow(profileButtons_[i], px, profileY + Scale(4), buttonWidths[i], Scale(30), TRUE);
             px += buttonWidths[i] + gap;
         }
+    }
+    if (languageCombo_) {
+        int langW = Scale(190);
+        MoveWindow(languageCombo_, clientW - m - langW, profileY + Scale(4), langW, Scale(240), TRUE);
     }
 
     // Páginas de itens.
@@ -1322,6 +1340,7 @@ void App::ApplyLanguage() {
     UpdateTabLabels();
     UpdateFooterLabels();
     UpdateProfileButtons();
+    if (languageCombo_) ComboBox_SetCurSel(languageCombo_, static_cast<int>(language_));
     UpdateDiagnostics();
     UpdateSelectionUi();
     if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE);
@@ -1453,6 +1472,7 @@ void App::SetBusyUi(bool busy, bool applying) {
     if (defaultButton_) EnableWindow(defaultButton_, !busy);
     if (dryRunCheck_) EnableWindow(dryRunCheck_, !busy);
     for (HWND button : profileButtons_) EnableWindow(button, !busy);
+    if (languageCombo_) EnableWindow(languageCombo_, !busy);
     for (HWND button : diagButtons_) EnableWindow(button, !busy);
     for (HWND button : logButtons_) EnableWindow(button, !busy);
 
@@ -1871,6 +1891,20 @@ void App::HandleCommand(WORD id, WORD code, HWND control) {
             UpdateDiagnostics();
             SetStatus(std::wstring(TrProfileName(static_cast<int>(activeProfile_))) + L" — " +
                       TrProfileDescription(static_cast<int>(activeProfile_)));
+            break;
+        }
+        case ID_LANGUAGE: {
+            if (code != CBN_SELCHANGE) break;
+            if (!languageCombo_) break;
+            int index = ComboBox_GetCurSel(languageCombo_);
+            if (index < 0 || index >= kLanguageCount) break;
+            Language lang = static_cast<Language>(index);
+            if (lang == language_) break;
+            language_ = lang;
+            SetUiLanguage(language_);
+            ApplyLanguage();
+            SaveSettings();
+            SetStatus(L"");
             break;
         }
         case ID_ELEVATE: {
