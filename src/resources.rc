@@ -62,7 +62,7 @@ END
 // Configurações
 // ---------------------------------------------------------------------------
 
-IDD_SETTINGS DIALOGEX 0, 0, 388, 266
+IDD_SETTINGS DIALOGEX 0, 0, 388, 306
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT
 CAPTION "Configurações"
@@ -83,8 +83,12 @@ BEGIN
     LTEXT           "O backup permite desfazer serviços, políticas e tarefas pelo menu de diagnóstico. Recursos opcionais não são removidos automaticamente.",
                     -1, 18, 186, 352, 28
 
-    DEFPUSHBUTTON   "Salvar", IDOK, 230, 236, 70, 18
-    PUSHBUTTON      "Cancelar", IDCANCEL, 306, 236, 70, 18
+    GROUPBOX        "Idioma / Language", -1, 8, 228, 372, 44
+    LTEXT           "Idioma:", IDC_SET_LANGUAGE_LABEL, 18, 243, 60, 10
+    COMBOBOX        IDC_SET_LANGUAGE, 84, 240, 288, 120, CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+
+    DEFPUSHBUTTON   "Salvar", IDOK, 230, 282, 70, 18
+    PUSHBUTTON      "Cancelar", IDCANCEL, 306, 282, 70, 18
 END
 
 // ---------------------------------------------------------------------------

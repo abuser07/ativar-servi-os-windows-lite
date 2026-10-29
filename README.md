@@ -10,6 +10,15 @@ Escritório) que desativam ou colocam em manual apenas os serviços desnecessár
 para cada situação. Toda alteração — ativar **ou** desativar — passa por revisão,
 simulação, relatório e backup reversível.
 
+## Idiomas / Languages
+
+- 🇧🇷 [Português](README.md) (este arquivo)
+- 🇬🇧 [English](docs/README.en.md)
+- 🇨🇳 [中文 (简体)](docs/README.zh-CN.md)
+- 🇮🇳 [हिन्दी (Hindi)](docs/README.hi.md)
+- 🇪🇸 [Español](docs/README.es.md)
+- 🇫🇷 [Français](docs/README.fr.md)
+
 ---
 
 ## Recursos
@@ -25,6 +34,14 @@ simulação, relatório e backup reversível.
 - **Desfazer última execução** (menu Diagnóstico).
 - Relatórios em texto e registro (log) detalhado.
 - Auto-elevação via UAC (`runas`) com preservação da seleção.
+- **Interface traduzida em 6 idiomas** (Português, Inglês, Espanhol, Francês,
+  Chinês simplificado e Hindi) — altere em *Configurações → Idioma*.
+
+### Idiomas da interface
+
+O seletor em *Configurações → Idioma* traduz imediatamente toda a interface
+(janelas, abas, botões, colunas, painel de detalhes e diálogos). O idioma é
+salvo em `settings.ini` e restaurado na próxima inicialização.
 
 ### Perfis de otimização
 

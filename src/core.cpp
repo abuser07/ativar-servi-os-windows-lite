@@ -1411,6 +1411,12 @@ void App::LoadSettings() {
     wchar_t source[4096] = {};
     GetPrivateProfileStringW(L"Geral", L"SourcePath", L"", source, _countof(source), ini.c_str());
     settings_.sourcePath = source;
+    wchar_t lang[64] = {};
+    GetPrivateProfileStringW(L"Geral", L"Language", L"", lang, _countof(lang), ini.c_str());
+    if (lang[0]) {
+        language_ = LanguageFromName(lang);
+    }
+    SetUiLanguage(language_);
 }
 
 void App::SaveSettings() {
@@ -1426,6 +1432,7 @@ void App::SaveSettings() {
     WritePrivateProfileStringW(L"Geral", L"AutoScan",
                                settings_.autoScan ? L"1" : L"0", ini.c_str());
     WritePrivateProfileStringW(L"Geral", L"SourcePath", settings_.sourcePath.c_str(), ini.c_str());
+    WritePrivateProfileStringW(L"Geral", L"Language", LanguageName(language_), ini.c_str());
 }
 
 // ---------------------------------------------------------------------------

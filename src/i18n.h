@@ -1,0 +1,118 @@
+#pragma once
+
+#include <windows.h>
+
+// Idiomas disponíveis na interface.
+enum class Language {
+    Portuguese = 0,
+    English = 1,
+    Spanish = 2,
+    French = 3,
+    Chinese = 4,
+    Hindi = 5
+};
+
+constexpr int kLanguageCount = 6;
+
+// Identificadores de strings traduzíveis.
+enum StrId {
+    STR_APP_TITLE = 0,
+    STR_APP_TITLE_READONLY,
+    STR_HEADER_TITLE,
+    STR_HEADER_SUBTITLE_ADMIN,
+    STR_HEADER_SUBTITLE_READONLY,
+    STR_PROFILE_LABEL,
+    STR_PROFILE_DEFAULT,
+    STR_PROFILE_GAMING,
+    STR_PROFILE_AI,
+    STR_PROFILE_OFFICE,
+    STR_PROFILE_DESC_DEFAULT,
+    STR_PROFILE_DESC_GAMING,
+    STR_PROFILE_DESC_AI,
+    STR_PROFILE_DESC_OFFICE,
+    STR_TAB_FEATURES,
+    STR_TAB_SERVICES,
+    STR_TAB_POLICIES,
+    STR_TAB_TASKS,
+    STR_TAB_DIAG,
+    STR_TAB_LOG,
+    STR_COL_ITEM,
+    STR_COL_CATEGORY,
+    STR_COL_CURRENT,
+    STR_COL_TARGET_DEFAULT,
+    STR_COL_TARGET_PROFILE,
+    STR_COL_ACTION,
+    STR_ACTION_ALREADY,
+    STR_ACTION_INSTALL,
+    STR_ACTION_DISABLE,
+    STR_ACTION_MANUAL,
+    STR_ACTION_ENABLE,
+    STR_ACTION_RESTORE,
+    STR_ACTION_ENABLE_TASK,
+    STR_ACTION_ESSENTIAL,
+    STR_KIND_FEATURE,
+    STR_KIND_SERVICE,
+    STR_KIND_POLICY,
+    STR_KIND_TASK,
+    STR_BTN_RECOMMENDED,
+    STR_BTN_ALL_PENDING,
+    STR_BTN_CLEAR,
+    STR_BTN_SETTINGS,
+    STR_BTN_RESCAN,
+    STR_BTN_ABOUT,
+    STR_BTN_APPLY_SELECTED,
+    STR_BTN_APPLY_PROFILE,
+    STR_BTN_RESTORE_DEFAULT,
+    STR_SIMULATE,
+    STR_CANCEL,
+    STR_SEARCH_PLACEHOLDER,
+    STR_ALL_CATEGORIES,
+    STR_DETAIL_TITLE,
+    STR_DETAIL_EMPTY,
+    STR_LABEL_CURRENT,
+    STR_LABEL_TARGET_DEFAULT,
+    STR_LABEL_TARGET_PROFILE,
+    STR_DETAIL_ESSENTIAL,
+    STR_DETAIL_UNAVAILABLE,
+    STR_DETAIL_OK,
+    STR_DETAIL_PENDING,
+    STR_STATUS_READY,
+    STR_STATUS_ANALYZE,
+    STR_DIAG_BTN_REFRESH,
+    STR_DIAG_BTN_SAVE,
+    STR_DIAG_BTN_LOGS,
+    STR_DIAG_BTN_BACKUPS,
+    STR_DIAG_BTN_UNDO,
+    STR_LOG_BTN_SAVE,
+    STR_LOG_BTN_FOLDER,
+    STR_LOG_BTN_CLEAR,
+    STR_LANG_LABEL,
+    STR_CAT_UPDATE,
+    STR_CAT_STORE,
+    STR_CAT_UI_AUDIO,
+    STR_CAT_SECURITY,
+    STR_CAT_NETWORK,
+    STR_CAT_PRINT,
+    STR_CAT_DEVICES,
+    STR_CAT_SYSTEM,
+    STR_CAT_SEARCH,
+    STR_CAT_RDP,
+    STR_CAT_REMOTE,
+    STR_CAT_GAMES,
+    STR_CAT_DIAG_TEL,
+    STR_CAT_MEDIA,
+    STR_CAT_COMPAT,
+    STR_CAT_VIRT,
+    STR_CAT_OTHER,
+    STR_CAT_DIAGNOSTIC,
+    STR_COUNT
+};
+
+const wchar_t* LanguageName(Language language);
+Language LanguageFromName(const wchar_t* name);
+void SetUiLanguage(Language language);
+Language GetUiLanguage();
+const wchar_t* Tr(StrId id);
+const wchar_t* TrCategory(const wchar_t* original);
+const wchar_t* TrProfileName(int profile);
+const wchar_t* TrProfileDescription(int profile);

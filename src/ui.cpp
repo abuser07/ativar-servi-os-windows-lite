@@ -69,18 +69,18 @@ int PageTabIndex(ItemKind kind) {
 const wchar_t* ActionName(const Item* item) {
     if (!item) return L"—";
     if (!item->supported) return L"—";
-    if (!item->needsChange) return L"Já conforme";
+    if (!item->needsChange) return Tr(STR_ACTION_ALREADY);
     switch (item->kind) {
-        case ItemKind::Feature: return L"Instalar";
+        case ItemKind::Feature: return Tr(STR_ACTION_INSTALL);
         case ItemKind::Service:
-            if (item->essential && !item->needsChange) return L"Essencial (protegido)";
-            if (item->targetStart == SERVICE_DISABLED) return L"Desativar";
-            if (item->targetStart == SERVICE_DEMAND_START) return L"Definir manual";
-            return L"Ativar";
-        case ItemKind::Policy: return L"Restaurar";
-        case ItemKind::Task: return L"Habilitar";
+            if (item->essential && !item->needsChange) return Tr(STR_ACTION_ESSENTIAL);
+            if (item->targetStart == SERVICE_DISABLED) return Tr(STR_ACTION_DISABLE);
+            if (item->targetStart == SERVICE_DEMAND_START) return Tr(STR_ACTION_MANUAL);
+            return Tr(STR_ACTION_ENABLE);
+        case ItemKind::Policy: return Tr(STR_ACTION_RESTORE);
+        case ItemKind::Task: return Tr(STR_ACTION_ENABLE_TASK);
     }
-    return L"Restaurar";
+    return Tr(STR_ACTION_RESTORE);
 }
 
 std::wstring ParentPath(const std::wstring& path) {
@@ -245,7 +245,7 @@ int App::Run(HINSTANCE instance, const std::wstring& commandLine, int showCmd) {
     } else if (settings_.autoScan) {
         StartScan(true);
     } else {
-        SetStatus(L"Pronto. Clique em Atualizar análise para verificar o sistema.");
+        SetStatus(Tr(STR_STATUS_READY));
         UpdateDiagnostics();
     }
 
@@ -427,7 +427,7 @@ void App::CreatePageControls(Page& page) {
                                   reinterpret_cast<HMENU>(static_cast<INT_PTR>(PageId(kind, 1))),
                                   instance_, nullptr);
     SendMessageW(page.search, EM_SETCUEBANNER, TRUE,
-                 reinterpret_cast<LPARAM>(L"Pesquisar por nome, categoria ou identificador..."));
+                 reinterpret_cast<LPARAM>(Tr(STR_SEARCH_PLACEHOLDER)));
 
     page.combo = CreateWindowExW(0, WC_COMBOBOXW, nullptr,
                                  WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST |
@@ -442,17 +442,17 @@ void App::CreatePageControls(Page& page) {
                                  reinterpret_cast<HMENU>(static_cast<INT_PTR>(PageId(kind, 3))),
                                  instance_, nullptr);
 
-    page.btnRecommended = CreateWindowExW(0, L"BUTTON", L"Recomendados",
+    page.btnRecommended = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_RECOMMENDED),
                                           WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
                                           0, 0, 0, 0, hwnd_,
                                           reinterpret_cast<HMENU>(static_cast<INT_PTR>(PageId(kind, 4))),
                                           instance_, nullptr);
-    page.btnAll = CreateWindowExW(0, L"BUTTON", L"Todos pendentes",
+    page.btnAll = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_ALL_PENDING),
                                   WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
                                   0, 0, 0, 0, hwnd_,
                                   reinterpret_cast<HMENU>(static_cast<INT_PTR>(PageId(kind, 5))),
                                   instance_, nullptr);
-    page.btnClear = CreateWindowExW(0, L"BUTTON", L"Limpar",
+    page.btnClear = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_CLEAR),
                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
                                     0, 0, 0, 0, hwnd_,
                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(PageId(kind, 6))),
@@ -460,8 +460,8 @@ void App::CreatePageControls(Page& page) {
 
     LVCOLUMNW column = {};
     column.mask = LVCF_TEXT | LVCF_WIDTH;
-    const wchar_t* headers[] = {L"Item", L"Categoria", L"Estado atual", L"Padrão Microsoft",
-                                L"Ação"};
+    const wchar_t* headers[] = {Tr(STR_COL_ITEM), Tr(STR_COL_CATEGORY), Tr(STR_COL_CURRENT),
+                                Tr(STR_COL_TARGET_DEFAULT), Tr(STR_COL_ACTION)};
     int widths[] = {330, 150, 190, 200, 120};
     for (int i = 0; i < 5; ++i) {
         column.pszText = const_cast<wchar_t*>(headers[i]);
@@ -512,7 +512,7 @@ bool App::CreateMainWindow(int showCmd) {
         return false;
     }
 
-    hwnd_ = CreateWindowExW(0, L"WLRestoreMainWindow", L"Restaurador Windows Lite",
+    hwnd_ = CreateWindowExW(0, L"WLRestoreMainWindow", Tr(STR_APP_TITLE),
                             WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN, CW_USEDEFAULT, CW_USEDEFAULT,
                             Scale(1180), Scale(780), nullptr, nullptr, instance_, this);
     if (!hwnd_) return false;
@@ -528,8 +528,8 @@ bool App::CreateMainWindow(int showCmd) {
                            WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | TCS_HOTTRACK,
                            0, 0, 0, 0, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(kTabId)),
                            instance_, nullptr);
-    const wchar_t* tabLabels[] = {L"Recursos", L"Serviços", L"Políticas", L"Tarefas",
-                                  L"Diagnóstico", L"Registro"};
+    const wchar_t* tabLabels[] = {Tr(STR_TAB_FEATURES), Tr(STR_TAB_SERVICES), Tr(STR_TAB_POLICIES),
+                                  Tr(STR_TAB_TASKS), Tr(STR_TAB_DIAG), Tr(STR_TAB_LOG)};
     for (int i = 0; i < 6; ++i) {
         TCITEMW item = {};
         item.mask = TCIF_TEXT;
@@ -550,12 +550,13 @@ bool App::CreateMainWindow(int showCmd) {
                                    0, 0, 0, 0, hwnd_,
                                    reinterpret_cast<HMENU>(static_cast<INT_PTR>(kSummaryId)),
                                    instance_, nullptr);
-    profileLabel_ = CreateWindowExW(0, L"STATIC", L"Perfil de otimização:",
+    profileLabel_ = CreateWindowExW(0, L"STATIC", Tr(STR_PROFILE_LABEL),
                                     WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX, 0, 0, 0, 0,
                                     hwnd_,
                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(kProfileLabelId)),
                                     instance_, nullptr);
-    const wchar_t* profileLabels[4] = {L"Padrão Microsoft", L"Jogos", L"IA", L"Escritório"};
+    const wchar_t* profileLabels[4] = {Tr(STR_PROFILE_DEFAULT), Tr(STR_PROFILE_GAMING),
+                                       Tr(STR_PROFILE_AI), Tr(STR_PROFILE_OFFICE)};
     for (int i = 0; i < 4; ++i) {
         DWORD style = WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTORADIOBUTTON | BS_PUSHLIKE;
         if (i == 0) style |= WS_GROUP;
@@ -564,30 +565,30 @@ bool App::CreateMainWindow(int showCmd) {
             reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_PROFILE + i)), instance_, nullptr);
     }
     Button_SetCheck(profileButtons_[static_cast<int>(activeProfile_)], BST_CHECKED);
-    dryRunCheck_ = CreateWindowExW(0, L"BUTTON", L"Simular (não altera o sistema)",
+    dryRunCheck_ = CreateWindowExW(0, L"BUTTON", Tr(STR_SIMULATE),
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_AUTOCHECKBOX, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_DRYRUN)),
                                    instance_, nullptr);
 
-    settingsButton_ = CreateWindowExW(0, L"BUTTON", L"Configurações",
+    settingsButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_SETTINGS),
                                       WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0,
                                       hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_SETTINGS)),
                                       instance_, nullptr);
-    rescanButton_ = CreateWindowExW(0, L"BUTTON", L"Atualizar análise",
+    rescanButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_RESCAN),
                                     WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0,
                                     hwnd_,
                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_SCAN)),
                                     instance_, nullptr);
-    aboutButton_ = CreateWindowExW(0, L"BUTTON", L"Sobre",
+    aboutButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_ABOUT),
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_ABOUT)),
                                    instance_, nullptr);
-    defaultButton_ = CreateWindowExW(0, L"BUTTON", L"Restaurar padrão Microsoft",
+    defaultButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_RESTORE_DEFAULT),
                                      WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0,
                                      hwnd_,
                                      reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_RESTORE_DEFAULT)),
                                      instance_, nullptr);
-    applyButton_ = CreateWindowExW(0, L"BUTTON", L"Aplicar selecionados",
+    applyButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_BTN_APPLY_SELECTED),
                                    WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 0, 0, 0, 0,
                                    hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_APPLY)),
                                    instance_, nullptr);
@@ -601,7 +602,7 @@ bool App::CreateMainWindow(int showCmd) {
                                 WS_CHILD | PBS_SMOOTH | PBS_MARQUEE, 0, 0, 0, 0, hwnd_,
                                 reinterpret_cast<HMENU>(static_cast<INT_PTR>(kProgressId)),
                                 instance_, nullptr);
-    cancelButton_ = CreateWindowExW(0, L"BUTTON", L"Cancelar",
+    cancelButton_ = CreateWindowExW(0, L"BUTTON", Tr(STR_CANCEL),
                                     WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON, 0, 0, 0, 0, hwnd_,
                                     reinterpret_cast<HMENU>(static_cast<INT_PTR>(kCancelId)),
                                     instance_, nullptr);
@@ -616,11 +617,11 @@ bool App::CreateMainWindow(int showCmd) {
         int id;
         const wchar_t* text;
     } diagButtons[] = {
-        {IDC_DIAG_REFRESH, L"Atualizar"},
-        {IDC_DIAG_SAVE, L"Salvar relatório"},
-        {IDC_DIAG_LOGS, L"Abrir logs"},
-        {IDC_DIAG_BACKUPS, L"Abrir backups"},
-        {IDC_DIAG_UNDO, L"Desfazer última execução"},
+        {IDC_DIAG_REFRESH, Tr(STR_DIAG_BTN_REFRESH)},
+        {IDC_DIAG_SAVE, Tr(STR_DIAG_BTN_SAVE)},
+        {IDC_DIAG_LOGS, Tr(STR_DIAG_BTN_LOGS)},
+        {IDC_DIAG_BACKUPS, Tr(STR_DIAG_BTN_BACKUPS)},
+        {IDC_DIAG_UNDO, Tr(STR_DIAG_BTN_UNDO)},
     };
     for (int i = 0; i < 5; ++i) {
         diagButtons_[i] = CreateWindowExW(0, L"BUTTON", diagButtons[i].text,
@@ -640,9 +641,9 @@ bool App::CreateMainWindow(int showCmd) {
         int id;
         const wchar_t* text;
     } logButtons[] = {
-        {IDC_LOG_SAVE, L"Salvar log"},
-        {IDC_LOG_FOLDER, L"Abrir pasta"},
-        {IDC_LOG_CLEAR, L"Limpar visualização"},
+        {IDC_LOG_SAVE, Tr(STR_LOG_BTN_SAVE)},
+        {IDC_LOG_FOLDER, Tr(STR_LOG_BTN_FOLDER)},
+        {IDC_LOG_CLEAR, Tr(STR_LOG_BTN_CLEAR)},
     };
     for (int i = 0; i < 3; ++i) {
         logButtons_[i] = CreateWindowExW(0, L"BUTTON", logButtons[i].text,
@@ -665,8 +666,7 @@ bool App::CreateMainWindow(int showCmd) {
     Layout();
     ShowTab(0);
     CenterWindow();
-    SetWindowTextW(hwnd_, admin_ ? L"Restaurador Windows Lite"
-                                 : L"Restaurador Windows Lite — Somente leitura");
+    SetWindowTextW(hwnd_, admin_ ? Tr(STR_APP_TITLE) : Tr(STR_APP_TITLE_READONLY));
     return true;
 }
 
@@ -798,8 +798,8 @@ void App::Layout() {
 
 void App::UpdateTabLabels() {
     if (!tab_) return;
-    const wchar_t* base[] = {L"Recursos", L"Serviços", L"Políticas", L"Tarefas",
-                             L"Diagnóstico", L"Registro"};
+    const wchar_t* base[] = {Tr(STR_TAB_FEATURES), Tr(STR_TAB_SERVICES), Tr(STR_TAB_POLICIES),
+                             Tr(STR_TAB_TASKS), Tr(STR_TAB_DIAG), Tr(STR_TAB_LOG)};
     for (int i = 0; i < 4; ++i) {
         int pending = 0;
         for (const Item& item : items_) {
@@ -927,13 +927,13 @@ void App::PaintHeader(HDC dc, const RECT& client) {
     SetBkMode(dc, TRANSPARENT);
     HGDIOBJ old = SelectObject(dc, fontTitle_);
     SetTextColor(dc, RGB(255, 255, 255));
-    TextOutW(dc, x, Scale(14), L"Restaurador Windows Lite", 24);
+    const wchar_t* headerTitle = Tr(STR_HEADER_TITLE);
+    TextOutW(dc, x, Scale(14), headerTitle, static_cast<int>(wcslen(headerTitle)));
 
     SelectObject(dc, fontSubtitle_);
     SetTextColor(dc, RGB(183, 207, 232));
-    const wchar_t* subtitle =
-        admin_ ? L"Restaura serviços, políticas e recursos desativados por imagens Lite"
-               : L"Modo somente leitura — clique em ELEVAR AGORA para liberar as alterações";
+    const wchar_t* subtitle = admin_ ? Tr(STR_HEADER_SUBTITLE_ADMIN)
+                                     : Tr(STR_HEADER_SUBTITLE_READONLY);
     TextOutW(dc, x, Scale(48), subtitle, static_cast<int>(wcslen(subtitle)));
     SelectObject(dc, old);
 
@@ -959,13 +959,12 @@ void App::PaintDetailPanel(HDC dc) {
         HGDIOBJ old = SelectObject(dc, fontUiBold_);
         SetTextColor(dc, kColorText);
         RECT title = {x, y, x + w, y + Scale(40)};
-        DrawTextW(dc, L"Detalhes do item", -1, &title, DT_SINGLELINE | DT_NOPREFIX);
+        DrawTextW(dc, Tr(STR_DETAIL_TITLE), -1, &title, DT_SINGLELINE | DT_NOPREFIX);
         y += Scale(40);
         SelectObject(dc, fontUi_);
         SetTextColor(dc, kColorMuted);
         RECT body = {x, y, x + w, y + Scale(120)};
-        DrawTextW(dc, L"Selecione um item na lista para ver o estado atual, o padrão de referência da Microsoft e a ação que será aplicada.",
-                  -1, &body, DT_WORDBREAK | DT_NOPREFIX);
+        DrawTextW(dc, Tr(STR_DETAIL_EMPTY), -1, &body, DT_WORDBREAK | DT_NOPREFIX);
         SelectObject(dc, old);
         return;
     }
@@ -991,7 +990,8 @@ void App::PaintDetailPanel(HDC dc) {
     HGDIOBJ old = SelectObject(dc, fontSmall_);
     SetTextColor(dc, kColorAccent);
     RECT cat = {x, y, x + w, y + Scale(16)};
-    DrawTextW(dc, item->category.c_str(), -1, &cat, DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+    DrawTextW(dc, TrCategory(item->category.c_str()), -1, &cat,
+              DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
     y += Scale(18);
     SelectObject(dc, old);
 
@@ -1013,10 +1013,10 @@ void App::PaintDetailPanel(HDC dc) {
     DeleteObject(line);
     y += Scale(10);
 
-    drawLabelValue(L"Estado atual", item->current, fontUi_, kColorText);
+    drawLabelValue(Tr(STR_LABEL_CURRENT), item->current, fontUi_, kColorText);
     const wchar_t* targetLabel = activeProfile_ == Profile::MicrosoftDefault
-                                     ? L"Padrão Microsoft"
-                                     : L"Destino do perfil";
+                                     ? Tr(STR_LABEL_TARGET_DEFAULT)
+                                     : Tr(STR_LABEL_TARGET_PROFILE);
     drawLabelValue(targetLabel, item->target, fontUi_, kColorText);
 
     // Divisor.
@@ -1054,19 +1054,19 @@ void App::PaintDetailPanel(HDC dc) {
     if (item->essential) {
         fill = kColorSoftBlue;
         color = RGB(16, 80, 150);
-        status = L"Essencial — serviço protegido contra desativação.";
+        status = Tr(STR_DETAIL_ESSENTIAL);
     } else if (!item->supported) {
         fill = kColorSoftAmber;
         color = kColorWarn;
-        status = L"Indisponível — pode ter sido removido pela imagem Lite.";
+        status = Tr(STR_DETAIL_UNAVAILABLE);
     } else if (!item->needsChange) {
         fill = kColorSoftGreen;
         color = kColorGood;
-        status = L"Já está no padrão de referência.";
+        status = Tr(STR_DETAIL_OK);
     } else {
         fill = kColorSoftBlue;
         color = kColorAccent;
-        status = L"Pendente — marque a caixa para aplicar a alteração.";
+        status = Tr(STR_DETAIL_PENDING);
     }
     if (item->critical && !item->essential && item->needsChange) status += L" Item crítico do sistema.";
     if (item->optional && item->needsChange) status += L" Item opcional.";
@@ -1260,12 +1260,12 @@ void App::UpdateFooterLabels() {
     if (defaultButton_) {
         SetWindowTextW(defaultButton_,
                        activeProfile_ == Profile::MicrosoftDefault
-                           ? L"Restaurar padrão Microsoft"
-                           : L"Aplicar perfil (recomendado)");
+                           ? Tr(STR_BTN_RESTORE_DEFAULT)
+                           : Tr(STR_BTN_APPLY_PROFILE));
     }
     const wchar_t* columnTitle = activeProfile_ == Profile::MicrosoftDefault
-                                     ? L"Padrão Microsoft"
-                                     : L"Destino do perfil";
+                                     ? Tr(STR_COL_TARGET_DEFAULT)
+                                     : Tr(STR_COL_TARGET_PROFILE);
     for (int i = 0; i < 4; ++i) {
         if (!pages_[i].list) continue;
         LVCOLUMNW column = {};
@@ -1282,6 +1282,49 @@ void App::UpdateProfileButtons() {
                             i == static_cast<int>(activeProfile_) ? BST_CHECKED : BST_UNCHECKED);
         }
     }
+}
+
+void App::ApplyLanguage() {
+    if (hwnd_) {
+        SetWindowTextW(hwnd_, admin_ ? Tr(STR_APP_TITLE) : Tr(STR_APP_TITLE_READONLY));
+    }
+    if (profileLabel_) SetWindowTextW(profileLabel_, Tr(STR_PROFILE_LABEL));
+    const wchar_t* profileLabels[4] = {Tr(STR_PROFILE_DEFAULT), Tr(STR_PROFILE_GAMING),
+                                       Tr(STR_PROFILE_AI), Tr(STR_PROFILE_OFFICE)};
+    for (int i = 0; i < 4; ++i) {
+        if (profileButtons_[i]) SetWindowTextW(profileButtons_[i], profileLabels[i]);
+    }
+    if (dryRunCheck_) SetWindowTextW(dryRunCheck_, Tr(STR_SIMULATE));
+    if (settingsButton_) SetWindowTextW(settingsButton_, Tr(STR_BTN_SETTINGS));
+    if (rescanButton_) SetWindowTextW(rescanButton_, Tr(STR_BTN_RESCAN));
+    if (aboutButton_) SetWindowTextW(aboutButton_, Tr(STR_BTN_ABOUT));
+    if (applyButton_) SetWindowTextW(applyButton_, Tr(STR_BTN_APPLY_SELECTED));
+    if (cancelButton_) SetWindowTextW(cancelButton_, Tr(STR_CANCEL));
+    for (int i = 0; i < 4; ++i) {
+        Page& page = pages_[i];
+        if (page.search) SendMessageW(page.search, EM_SETCUEBANNER, TRUE,
+                                      reinterpret_cast<LPARAM>(Tr(STR_SEARCH_PLACEHOLDER)));
+        if (page.btnRecommended) SetWindowTextW(page.btnRecommended, Tr(STR_BTN_RECOMMENDED));
+        if (page.btnAll) SetWindowTextW(page.btnAll, Tr(STR_BTN_ALL_PENDING));
+        if (page.btnClear) SetWindowTextW(page.btnClear, Tr(STR_BTN_CLEAR));
+    }
+    const wchar_t* diagTexts[5] = {Tr(STR_DIAG_BTN_REFRESH), Tr(STR_DIAG_BTN_SAVE),
+                                   Tr(STR_DIAG_BTN_LOGS), Tr(STR_DIAG_BTN_BACKUPS),
+                                   Tr(STR_DIAG_BTN_UNDO)};
+    for (int i = 0; i < 5; ++i) {
+        if (diagButtons_[i]) SetWindowTextW(diagButtons_[i], diagTexts[i]);
+    }
+    const wchar_t* logTexts[3] = {Tr(STR_LOG_BTN_SAVE), Tr(STR_LOG_BTN_FOLDER),
+                                  Tr(STR_LOG_BTN_CLEAR)};
+    for (int i = 0; i < 3; ++i) {
+        if (logButtons_[i]) SetWindowTextW(logButtons_[i], logTexts[i]);
+    }
+    UpdateTabLabels();
+    UpdateFooterLabels();
+    UpdateProfileButtons();
+    UpdateDiagnostics();
+    UpdateSelectionUi();
+    if (hwnd_) InvalidateRect(hwnd_, nullptr, TRUE);
 }
 
 void App::UpdateDetails(Item* item) {
@@ -1436,11 +1479,11 @@ void App::SetBusyUi(bool busy, bool applying) {
 void App::UpdateDiagnostics() {
     if (!diagEdit_) return;
     std::wstring text;
-    text += L"Windows Lite Restore — Diagnóstico\r\n";
+    text += L"Windows Lite Restore — " + std::wstring(Tr(STR_TAB_DIAG)) + L"\r\n";
     text += L"Gerado em: " + TimestampNow(false) + L"\r\n";
     text += L"Modo: " + std::wstring(admin_ ? L"administrador" : L"somente leitura") + L"\r\n";
-    text += L"Perfil: " + std::wstring(ProfileName(activeProfile_)) + L"\r\n";
-    text += L"Descrição: " + std::wstring(ProfileDescription(activeProfile_)) + L"\r\n";
+    text += L"Perfil: " + std::wstring(TrProfileName(static_cast<int>(activeProfile_))) + L"\r\n";
+    text += L"Descrição: " + std::wstring(TrProfileDescription(static_cast<int>(activeProfile_))) + L"\r\n";
     text += L"\r\n";
     text += GetSystemSummary();
 
@@ -1461,7 +1504,8 @@ void App::UpdateDiagnostics() {
         if (item.supported && item.needsChange && item.recommended) ++recommended;
     }
     text += L"\r\nItens analisados:\r\n";
-    const wchar_t* names[4] = {L"Recursos", L"Serviços", L"Políticas", L"Tarefas"};
+    const wchar_t* names[4] = {Tr(STR_KIND_FEATURE), Tr(STR_KIND_SERVICE), Tr(STR_KIND_POLICY),
+                               Tr(STR_KIND_TASK)};
     for (int i = 0; i < 4; ++i) {
         text += L"  " + std::wstring(names[i]) + L": " + FormatInt(counts[i]) + L" (" +
                 FormatInt(pending[i]) + L" pendente(s))\r\n";
@@ -1825,8 +1869,8 @@ void App::HandleCommand(WORD id, WORD code, HWND control) {
             UpdateFooterLabels();
             UpdateProfileButtons();
             UpdateDiagnostics();
-            SetStatus(std::wstring(L"Perfil: ") + ProfileName(activeProfile_) + L" — " +
-                      ProfileDescription(activeProfile_));
+            SetStatus(std::wstring(TrProfileName(static_cast<int>(activeProfile_))) + L" — " +
+                      TrProfileDescription(static_cast<int>(activeProfile_)));
             break;
         }
         case ID_ELEVATE: {
@@ -1953,7 +1997,7 @@ void App::StartScan(bool autoSelectRecommended) {
         if (pages_[i].list) ListView_DeleteAllItems(pages_[i].list);
     }
     updatingList_ = false;
-    SetStatus(L"Analisando o sistema...");
+    SetStatus(Tr(STR_STATUS_ANALYZE));
     SetBusyUi(true, false);
     StartWorkerScan();
 }
@@ -2472,6 +2516,7 @@ void App::ShowApplyConfirmation(const std::vector<Item*>& plan, ConfirmOptions* 
 namespace {
 struct SettingsDialogContext {
     Settings settings;
+    Language language;
 };
 
 void UpdateSettingsNote(HWND dialog) {
@@ -2496,6 +2541,7 @@ INT_PTR CALLBACK SettingsDlgProc(HWND dialog, UINT msg, WPARAM wp, LPARAM lp) {
             ctx = reinterpret_cast<SettingsDialogContext*>(lp);
             SetWindowLongPtrW(dialog, DWLP_USER, reinterpret_cast<LONG_PTR>(ctx));
             SetDialogIcon(dialog);
+            SetWindowTextW(dialog, Tr(STR_BTN_SETTINGS));
             Button_SetCheck(GetDlgItem(dialog, IDC_SET_WU),
                             ctx->settings.useWindowsUpdate ? BST_CHECKED : BST_UNCHECKED);
             Button_SetCheck(GetDlgItem(dialog, IDC_SET_RESTORE),
@@ -2505,6 +2551,15 @@ INT_PTR CALLBACK SettingsDlgProc(HWND dialog, UINT msg, WPARAM wp, LPARAM lp) {
             Button_SetCheck(GetDlgItem(dialog, IDC_SET_AUTOSCAN),
                             ctx->settings.autoScan ? BST_CHECKED : BST_UNCHECKED);
             SetDlgItemTextW(dialog, IDC_SET_SOURCE, ctx->settings.sourcePath.c_str());
+            SetDlgItemTextW(dialog, IDC_SET_LANGUAGE_LABEL, Tr(STR_LANG_LABEL));
+            {
+                HWND combo = GetDlgItem(dialog, IDC_SET_LANGUAGE);
+                for (int i = 0; i < kLanguageCount; ++i) {
+                    SendMessageW(combo, CB_ADDSTRING, 0,
+                                 reinterpret_cast<LPARAM>(LanguageName(static_cast<Language>(i))));
+                }
+                ComboBox_SetCurSel(combo, static_cast<int>(ctx->language));
+            }
             UpdateSettingsNote(dialog);
             CenterDialog(dialog);
             return TRUE;
@@ -2547,6 +2602,11 @@ INT_PTR CALLBACK SettingsDlgProc(HWND dialog, UINT msg, WPARAM wp, LPARAM lp) {
                         return TRUE;
                     }
                     ctx->settings = settings;
+                    int langIndex =
+                        ComboBox_GetCurSel(GetDlgItem(dialog, IDC_SET_LANGUAGE));
+                    if (langIndex >= 0 && langIndex < kLanguageCount) {
+                        ctx->language = static_cast<Language>(langIndex);
+                    }
                     EndDialog(dialog, IDOK);
                     return TRUE;
                 }
@@ -2580,10 +2640,17 @@ INT_PTR CALLBACK SettingsDlgProc(HWND dialog, UINT msg, WPARAM wp, LPARAM lp) {
 void App::ShowSettingsDialog() {
     SettingsDialogContext ctx;
     ctx.settings = settings_;
+    ctx.language = language_;
     INT_PTR result = DialogBoxParamW(instance_, MAKEINTRESOURCEW(IDD_SETTINGS), hwnd_,
                                      SettingsDlgProc, reinterpret_cast<LPARAM>(&ctx));
     if (result == IDOK) {
         settings_ = ctx.settings;
+        if (ctx.language != language_) {
+            language_ = ctx.language;
+            SetUiLanguage(language_);
+            ApplyLanguage();
+            SetStatus(L"");
+        }
         SaveSettings();
         UpdateDiagnostics();
         SetStatus(L"Configurações salvas.");
@@ -2601,6 +2668,7 @@ INT_PTR CALLBACK AboutDlgProc(HWND dialog, UINT msg, WPARAM wp, LPARAM lp) {
     switch (msg) {
         case WM_INITDIALOG:
             SetDialogIcon(dialog);
+            SetWindowTextW(dialog, (std::wstring(Tr(STR_BTN_ABOUT)) + L" — Windows Lite Restore").c_str());
             SetDlgItemTextW(dialog, IDC_ABOUT_VERSION, L"Versão 1.0.0");
             SetDlgItemTextW(dialog, IDC_ABOUT_BUILD, GetWindowsBuildString().c_str());
             CenterDialog(dialog);

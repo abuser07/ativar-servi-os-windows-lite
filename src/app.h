@@ -20,6 +20,7 @@
 #include <cstdint>
 
 #include "resource.h"
+#include "i18n.h"
 
 // ---------------------------------------------------------------------------
 // Catálogo estático (catalog.cpp)
@@ -255,6 +256,7 @@ public:
     void ApplyProfileSelection();
     void UpdateFooterLabels();
     void UpdateProfileButtons();
+    void ApplyLanguage();
     void SetBusyUi(bool busy, bool applying = false);
     void AppendLogLine(const std::wstring& line);
     void UpdateDiagnostics();
@@ -380,6 +382,7 @@ private:
     bool applyDryRun_ = false;
     bool firstScan_ = true;
     Profile activeProfile_ = Profile::MicrosoftDefault;
+    Language language_ = Language::Portuguese;
     bool closing_ = false;
     bool updatingList_ = false;
     int dpi_ = 96;

@@ -74,7 +74,7 @@ $common = @('-std=c++17', '-municode', '-mwindows', '-DUNICODE', '-D_UNICODE',
             '-Wall', '-Wextra', '-Wno-cast-function-type')
 
 $objects = @()
-foreach ($file in @('main.cpp', 'ui.cpp', 'core.cpp', 'catalog.cpp')) {
+foreach ($file in @('main.cpp', 'ui.cpp', 'core.cpp', 'catalog.cpp', 'i18n.cpp')) {
     $obj = Join-Path $build ([System.IO.Path]::GetFileNameWithoutExtension($file) + '.o')
     $objects += $obj
     Write-Host "Compilando $file ..."
@@ -99,6 +99,14 @@ Write-Host "Tamanho: $([math]::Round($size / 1MB, 2)) MB"
 $readme = Join-Path $root 'README.md'
 if (Test-Path $readme) {
     Copy-Item $readme (Join-Path $dist 'README.md') -Force
+}
+
+# Copia a documentação em outros idiomas, se existir.
+$docs = Join-Path $root 'docs'
+if (Test-Path $docs) {
+    $destDocs = Join-Path $dist 'docs'
+    New-Item -ItemType Directory -Force -Path $destDocs | Out-Null
+    Copy-Item (Join-Path $docs '*.md') $destDocs -Force
 }
 
 # Checksum.
