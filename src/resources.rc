@@ -1,0 +1,113 @@
+#include <windows.h>
+#include "resource.h"
+
+// ---------------------------------------------------------------------------
+// Ícone, manifesto e versão
+// ---------------------------------------------------------------------------
+
+IDI_APPICON ICON "app.ico"
+1 RT_MANIFEST "app.manifest"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,0
+ PRODUCTVERSION 1,0,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Projeto independente"
+            VALUE "FileDescription", "Restaurador Windows Lite"
+            VALUE "FileVersion", "1.0.0"
+            VALUE "InternalName", "WindowsLiteRestore"
+            VALUE "LegalCopyright", "Uso livre. Sem vínculo com a Microsoft."
+            VALUE "OriginalFilename", "WindowsLiteRestore.exe"
+            VALUE "ProductName", "Windows Lite Restore"
+            VALUE "ProductVersion", "1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// ---------------------------------------------------------------------------
+// Confirmação
+// ---------------------------------------------------------------------------
+
+IDD_CONFIRM DIALOGEX 0, 0, 388, 318
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT
+CAPTION "Confirmar restauração"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    ICON            IDI_APPICON, IDC_CONFIRM_ICON, 12, 12, 20, 20
+    LTEXT           "Revise o plano antes de alterar o Windows.", -1, 42, 14, 330, 11
+    LTEXT           "Itens marcados serão restaurados para o padrão de referência da Microsoft.", -1, 42, 27, 330, 11
+    EDITTEXT        IDC_CONFIRM_SUMMARY, 12, 44, 364, 156, ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL | WS_VSCROLL | WS_TABSTOP
+    AUTOCHECKBOX    "Criar um ponto de restauração do sistema antes de aplicar", IDC_CONFIRM_RESTORE, 12, 207, 364, 10
+    AUTOCHECKBOX    "Criar um backup reversível de serviços, políticas e tarefas", IDC_CONFIRM_BACKUP, 12, 222, 364, 10
+    LTEXT           "", IDC_CONFIRM_NOTE, 12, 238, 364, 38
+    DEFPUSHBUTTON   "Aplicar", IDOK, 230, 290, 70, 18
+    PUSHBUTTON      "Cancelar", IDCANCEL, 306, 290, 70, 18
+END
+
+// ---------------------------------------------------------------------------
+// Configurações
+// ---------------------------------------------------------------------------
+
+IDD_SETTINGS DIALOGEX 0, 0, 388, 266
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT
+CAPTION "Configurações"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "Recursos opcionais do Windows", -1, 8, 8, 372, 104
+    AUTOCHECKBOX    "Usar o Windows Update como fonte quando possível", IDC_SET_WU, 18, 24, 350, 10
+    LTEXT           "Pasta de origem alternativa (ISO montada ou mídia do Windows):", -1, 18, 42, 330, 10
+    EDITTEXT        IDC_SET_SOURCE, 18, 54, 302, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "Procurar...", IDC_SET_BROWSE, 326, 53, 46, 16
+    LTEXT           "Use esta opção quando o DISM informar que os arquivos de origem não foram encontrados. Deixe vazio para usar a mídia padrão e o Windows Update.",
+                    IDC_SET_NOTE, 18, 74, 352, 30
+
+    GROUPBOX        "Segurança e inicialização", -1, 8, 120, 372, 100
+    AUTOCHECKBOX    "Criar ponto de restauração antes de aplicar alterações", IDC_SET_RESTORE, 18, 136, 350, 10
+    AUTOCHECKBOX    "Criar backup reversível antes de aplicar alterações", IDC_SET_BACKUP, 18, 152, 350, 10
+    AUTOCHECKBOX    "Analisar o sistema automaticamente ao abrir o aplicativo", IDC_SET_AUTOSCAN, 18, 168, 350, 10
+    LTEXT           "O backup permite desfazer serviços, políticas e tarefas pelo menu de diagnóstico. Recursos opcionais não são removidos automaticamente.",
+                    -1, 18, 186, 352, 28
+
+    DEFPUSHBUTTON   "Salvar", IDOK, 230, 236, 70, 18
+    PUSHBUTTON      "Cancelar", IDCANCEL, 306, 236, 70, 18
+END
+
+// ---------------------------------------------------------------------------
+// Sobre
+// ---------------------------------------------------------------------------
+
+IDD_ABOUT DIALOGEX 0, 0, 388, 254
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_DLGMODALFRAME | WS_EX_CONTROLPARENT
+CAPTION "Sobre o Restaurador Windows Lite"
+FONT 9, "Segoe UI", 400, 0, 0x1
+BEGIN
+    ICON            IDI_APPICON, IDC_ABOUT_ICON, 14, 14, 32, 32
+    LTEXT           "Windows Lite Restore", -1, 58, 14, 310, 16
+    LTEXT           "Versão 1.0.0", IDC_ABOUT_VERSION, 58, 34, 310, 10
+    LTEXT           "Sistema atual:", -1, 58, 50, 80, 10
+    LTEXT           "", IDC_ABOUT_BUILD, 118, 50, 250, 10
+    LTEXT           "Restaura serviços, políticas de registro, tarefas agendadas e recursos opcionais desativados ou removidos por imagens Lite do Windows.",
+                    -1, 14, 82, 360, 30
+    LTEXT           "O aplicativo nunca desativa nada. Toda alteração é revisada antes da aplicação, com simulação, relatório e backup reversível para serviços, políticas e tarefas.",
+                    -1, 14, 116, 360, 30
+    LTEXT           "Os padrões de referência correspondem a uma instalação completa do Windows 10/11. Edições, builds e hardware podem exigir ajustes. Recursos removidos da imagem só podem ser reinstalados com mídia de origem compatível.",
+                    -1, 14, 150, 360, 40
+    LTEXT           "Ferramenta independente, sem vínculo com a Microsoft. Use por sua conta e risco.", -1, 14, 198, 360, 20
+    DEFPUSHBUTTON   "Fechar", IDOK, 306, 228, 70, 18
+END
